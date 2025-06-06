@@ -1,0 +1,61 @@
+{
+  "settings": {
+    "icp": "黑ICP备202100xxxx号-1"
+  },
+  "categories": [
+    {
+      "id": "1",
+      "name": "自制工具",
+      "order": 0
+    },
+    {
+      "id": "2",
+      "name": "推荐工具",
+      "order": 1
+    }
+  ],
+  "tools": [
+    {
+      "id": "1",
+      "title": "ComparePhotos",
+      "description": "一个简单好用的图片对比工具，为摄影博主和数码博主量身打造。",
+      "url": "https://cp.jimplay.cn",
+      "categoryId": "1",
+      "tags": [
+        "照片对比"
+      ]
+    },
+    {
+      "id": "1749208244358",
+      "title": "ezDrop插件",
+      "description": "简单拖放，轻松排版！简单、安全、轻量的公众号SVG排版辅助工具。",
+      "url": "https://ezdrop.cn/",
+      "categoryId": "2",
+      "tags": [
+        "公众号排版",
+        "SVG排版",
+        "浏览器插件"
+      ]
+    },
+    {
+      "id": "1749217734196",
+      "title": "baidu",
+      "description": "一个搜索引擎",
+      "url": "baidu.com",
+      "categoryId": "2",
+      "tags": [
+        "搜索"
+      ]
+    },
+    {
+      "id": "1749218748068",
+      "title": "asfasdfasf",
+      "description": "asfasdfa",
+      "url": "asfasdf",
+      "categoryId": "2",
+      "tags": [
+        "asdfasd"
+      ]
+    }
+  ]
+}

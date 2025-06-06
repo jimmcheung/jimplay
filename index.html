@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>尽玩Space - JimPlay.cn</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/script.js" defer></script>
+</head>
+<body>
+    <div class="background-noise"></div>
+
+    <div id="main-content">
+        <header class="global-header">
+            <a href="/" class="logo">
+                <b>JimPlay</b><span class="logo-dot">.cn</span><span class="logo-zh">尽玩Space</span>
+            </a>
+            <div id="settings-container" class="settings-container">
+                <button id="settings-btn" class="settings-btn" aria-label="Settings" title="设置">
+                    <svg class="settings-icon" viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.69-1.62-0.92L14.4,2.23c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.44,0.17-0.48,0.41L9.22,4.65C8.63,4.88,8.1,5.19,7.6,5.57L5.21,4.61C4.99,4.52,4.74,4.59,4.62,4.81L2.7,8.13 c-0.11,0.2-0.06,0.47,0.12,0.61L4.85,10.3c-0.04,0.3-0.06,0.61-0.06,0.94c0,0.32,0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.69,1.62,0.92L9.6,21.77 c0.04,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.48-0.41l0.38-2.42c0.59-0.23,1.12-0.54,1.62-0.92l2.39,0.96 c0.22,0.08,0.47,0.01,0.59-0.22l1.92-3.32c0.11-0.2,0.06-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"></path></svg>
+                </button>
+                 <div class="settings-menu">
+                    <div class="theme-switcher">
+                        <span class="menu-label">外观</span>
+                        <div class="theme-buttons">
+                            <button class="theme-btn" data-theme="light">浅色</button>
+                            <button class="theme-btn" data-theme="dark">深色</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main id="timeline-container">
+            <!-- Timeline items will be dynamically inserted here -->
+        </main>
+
+        <footer class="site-footer">
+            <div class="footer-content">
+                <div class="footer-left">
+                    <span>Created by Jim</span>
+                    <span class="separator">·</span>
+                    <a href="https://space.bilibili.com/13818699" target="_blank" title="Bilibili: Jim超爱玩">
+                        <svg class="footer-icon" viewBox="0 0 24 24"><path d="M17.813 4.653h.854c1.51.054 2.769.578 3.773 1.574 1.004.995 1.524 2.249 1.56 3.76v7.36c-.036 1.51-.556 2.769-1.56 3.773s-2.262 1.524-3.773 1.56H5.333c-1.51-.036-2.769-.556-3.773-1.56S.036 18.858 0 17.347v-7.36c.036-1.511.556-2.765 1.56-3.76 1.004-.996 2.262-1.52 3.773-1.574h.774l-1.174-1.12a1.234 1.234 0 0 1-.373-.906c0-.356.124-.658.373-.907l.027-.027c.267-.249.573-.373.92-.373.347 0 .653.124.92.373L9.653 4.44c.071.071.134.142.187.213h4.267a.836.836 0 0 1 .16-.213l2.853-2.747c.267-.249.573-.373.92-.373.347 0 .662.151.929.4.267.249.391.551.391.907 0 .355-.124.657-.373.906L17.813 4.653zM5.333 7.24c-.746.018-1.373.276-1.88.773-.506.498-.769 1.13-.786 1.894v7.52c.017.764.28 1.395.786 1.893.507.498 1.134.756 1.88.773h13.334c.746-.017 1.373-.275 1.88-.773.506-.498.769-1.129.786-1.893v-7.52c-.017-.765-.28-1.396-.786-1.894-.507-.497-1.134-.755-1.88-.773H5.333zM8 11.107c.373 0 .684.124.933.373.25.249.383.569.4.96v1.173c-.017.391-.15.711-.4.96-.249.25-.56.374-.933.374s-.684-.125-.933-.374c-.25-.249-.383-.569-.4-.96V12.44c0-.373.129-.689.386-.947.258-.257.574-.386.947-.386zm8 0c.373 0 .684.124.933.373.25.249.383.569.4.96v1.173c-.017.391-.15.711-.4.96-.249.25-.56.374-.933.374s-.684-.125-.933-.374c-.25-.249-.383-.569-.4-.96V12.44c0-.373.129-.689.386-.947.258-.257.574-.386.947-.386zm8 0c.373 0 .684.124.933.373.25.249.383.569.4.96v1.173c-.017.391-.15.711-.4.96-.249.25-.56.374-.933.374s-.684-.125-.933-.374c-.25-.249-.383-.569-.4-.96V12.44c.017-.391.15-.711.4-.96.249-.249.56-.373.933-.373Z"></path></svg>
+                        @Jim超爱玩
+                    </a>
+                    <span class="separator">·</span>
+                    <span>© 2024</span>
+                    <span class="separator">·</span>
+                    <a href="#" id="donate-link">工具好用? 打赏作者。</a>
+                </div>
+                <div class="footer-right">
+                    <span>Made with <span class="heart-emoji">♥</span> in China</span>
+                    <span class="separator">·</span>
+                    <span id="icp-container"></span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Donate Modal -->
+    <div id="donate-modal" class="donate-modal">
+        <div class="donate-modal-content">
+            <button class="donate-modal-close" aria-label="Close">&times;</button>
+            <h3 class="donate-modal-title">感谢支持</h3>
+            <div class="donate-qr-container">
+                <img src="assets/donate-qr.jpeg" alt="打赏二维码" id="donate-qr">
+            </div>
+            <p class="donate-modal-text">扫码支持作者继续创作</p>
+        </div>
+    </div>
+</body>
+</html> 

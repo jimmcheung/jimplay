@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 - 尽玩Space</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <div class="background-noise"></div>
+
+    <!-- Login View -->
+    <div id="login-view" class="admin-container">
+        <h1>后台登录</h1>
+        <form id="login-form">
+            <div class="password-wrapper">
+                <input type="password" id="password" placeholder="请输入密码" required>
+                <button type="button" id="toggle-password" class="toggle-password-btn" aria-label="Toggle password visibility"></button>
+            </div>
+            <button type="submit">登录</button>
+        </form>
+        <p id="login-error" class="error-message"></p>
+    </div>
+
+    <!-- Admin Panel View -->
+    <div id="admin-panel" style="display: none;">
+        <header class="global-header">
+             <a href="/" class="logo">
+                <b>JimPlay</b><span class="logo-dot">.cn</span><span class="logo-zh">尽玩Space</span>
+            </a>
+            <div class="header-actions">
+                <button id="logout-btn" class="btn btn-secondary">退出</button>
+                <div id="settings-container" class="settings-container">
+                    <button id="settings-btn" class="settings-btn" aria-label="Settings" title="设置">
+                        <svg class="settings-icon" viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.69-1.62-0.92L14.4,2.23c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.44,0.17-0.48,0.41L9.22,4.65C8.63,4.88,8.1,5.19,7.6,5.57L5.21,4.61C4.99,4.52,4.74,4.59,4.62,4.81L2.7,8.13 c-0.11,0.2-0.06,0.47,0.12,0.61L4.85,10.3c-0.04,0.3-0.06,0.61-0.06,0.94c0,0.32,0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18-0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.69,1.62,0.92L9.6,21.77 c0.04,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17-0.48-0.41l0.38-2.42c0.59-0.23,1.12-0.54,1.62-0.92l2.39,0.96 c0.22,0.08,0.47,0.01,0.59-0.22l1.92-3.32c0.11-0.2,0.06-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"></path></svg>
+                    </button>
+                    <div class="settings-menu">
+                        <div class="theme-switcher">
+                            <span class="menu-label">外观</span>
+                            <div class="theme-buttons">
+                                <button class="theme-btn" data-theme="light">浅色</button>
+                                <button class="theme-btn" data-theme="dark">深色</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="admin-body">
+            <aside class="sidebar">
+                <nav class="sidebar-nav">
+                    <a href="#tools" class="nav-item active" data-view="tools-view">工具管理</a>
+                    <a href="#categories" class="nav-item" data-view="categories-view">栏目管理</a>
+                    <a href="#settings" class="nav-item" data-view="settings-view">网站设置</a>
+                </nav>
+                <footer class="sidebar-footer">
+                    <a href="/" target="_blank">返回主站</a>
+                </footer>
+            </aside>
+
+            <main class="main-content">
+                <div class="view-wrapper">
+                    <!-- Tools View -->
+                    <div id="tools-view" class="view active">
+                        <div class="view-header">
+                            <h2>工具管理</h2>
+                            <button id="add-tool-btn" class="btn btn-primary">新建工具</button>
+                        </div>
+                        <section id="tools-list"></section>
+                    </div>
+                    <!-- Categories View -->
+                    <div id="categories-view" class="view">
+                        <div class="view-header">
+                            <h2>栏目管理</h2>
+                            <div>
+                                <button id="add-category-btn" class="btn btn-primary">新建栏目</button>
+                                <button id="save-category-order-btn" class="btn btn-secondary" style="display: none;">保存栏目顺序</button>
+                            </div>
+                        </div>
+                        <p>拖拽以排序。只有未被任何工具使用的栏目才能被删除。</p>
+                        <div id="category-list"></div>
+                    </div>
+                    <!-- Settings View -->
+                    <div id="settings-view" class="view">
+                        <div class="view-header">
+                            <h2>网站设置</h2>
+                        </div>
+                        <form id="settings-form">
+                            <div class="form-field">
+                                <label for="icp-input">ICP备案号</label>
+                                <input type="text" id="icp-input">
+                            </div>
+                            <div class="form-field">
+                                <label for="icp-url-input">备案号链接</label>
+                                <input type="text" id="icp-url-input" placeholder="例如：https://beian.miit.gov.cn/">
+                            </div>
+                            <div class="form-buttons">
+                                <button type="submit" class="btn btn-primary">保存设置</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <!-- Tool Edit Modal -->
+    <div id="tool-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <form id="edit-form">
+                <h2 id="form-title">添加新工具</h2>
+                <button type="button" class="modal-close-btn" aria-label="Close">&times;</button>
+                <input type="hidden" id="tool-id">
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label for="tool-title">标题</label>
+                        <input type="text" id="tool-title" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="tool-category">栏目</label>
+                        <select id="tool-category" required></select>
+                    </div>
+                </div>
+                <div class="form-field">
+                    <label for="tool-url">链接</label>
+                    <input type="text" id="tool-url" required>
+                </div>
+                <div class="form-field">
+                    <label for="tool-tags-input">标签 (输入后按回车)</label>
+                    <div id="tags-container" class="tags-container">
+                        <input type="text" id="tool-tags-input" autocomplete="off">
+                    </div>
+                    <div id="tags-suggestions" class="tags-suggestions"></div>
+                </div>
+                <div class="form-field">
+                    <label for="tool-description">描述</label>
+                    <textarea id="tool-description" required></textarea>
+                </div>
+                <div class="form-buttons">
+                    <button type="submit" class="btn btn-primary">保存</button>
+                    <button type="button" id="cancel-edit-btn" class="btn btn-secondary">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Category Edit Modal -->
+    <div id="category-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <form id="category-edit-form">
+                <h2 id="category-form-title">添加新栏目</h2>
+                <button type="button" class="modal-close-btn" aria-label="Close">&times;</button>
+                <input type="hidden" id="category-id">
+                <div class="form-field">
+                    <label for="category-name">栏目名称</label>
+                    <input type="text" id="category-name" required>
+                </div>
+                <div class="form-buttons">
+                    <button type="submit" class="btn btn-primary">保存</button>
+                    <button type="button" id="cancel-category-edit-btn" class="btn btn-secondary">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/admin.js"></script>
+</body>
+</html> 
