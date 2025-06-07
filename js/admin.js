@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const togglePasswordBtn = document.getElementById('toggle-password');
     const loginError = document.getElementById('login-error');
     const logoutBtn = document.getElementById('logout-btn');
-    let adminPassword = sessionStorage.getItem('adminPassword');
+    let adminToken = sessionStorage.getItem('adminToken');
 
     // SVG Icons for password toggle
     const eyeIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
         TOOLS: '/api/tools',
         CATEGORIES: '/api/categories',
         SETTINGS: '/api/settings',
-        AUTH_CHECK: '/api/auth/check'
+        AUTH_LOGIN: '/api/auth/login'
     };
 
     // --- View Switching ---
@@ -52,6 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const categoryFormTitle = document.getElementById('category-form-title');
     const categoryIdInput = document.getElementById('category-id');
     const categoryNameInput = document.getElementById('category-name');
+    const categoryParentSelect = document.getElementById('category-parent');
     const cancelCategoryEditBtn = document.getElementById('cancel-category-edit-btn');
     const categoryModalCloseBtn = categoryModal.querySelector('.modal-close-btn');
     const saveCategoryOrderBtn = document.getElementById('save-category-order-btn');
@@ -83,11 +84,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- API Fetch Utility ---
-    const apiFetch = async (url, options = {}, tempPassword = null) => {
+    const apiFetch = async (url, options = {}) => {
         const headers = { 'Content-Type': 'application/json', ...options.headers };
-        const pass = tempPassword || adminPassword;
-        if (pass) headers['Authorization'] = pass;
-        
+        if (adminToken) headers['Authorization'] = `Bearer ${adminToken}`;
         try {
             const response = await fetch(url, { ...options, headers });
             if (response.status === 401) {
@@ -117,6 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const tableRows = tools.map(tool => {
             const category = categories.find(c => c.id === tool.categoryId);
+            const categoryName = category ? (category.parentId ? `${categories.find(p=>p.id===category.parentId).name} / ${category.name}` : category.name) : '未分类';
             return `
                 <tr>
                     <td>
@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <a href="${tool.url}" target="_blank" class="tool-url">${tool.url}</a>
                         </div>
                     </td>
-                    <td><span class="tag-cell">${category ? category.name : '未分类'}</span></td>
+                    <td><span class="tag-cell">${categoryName}</span></td>
                     <td>
                         <div class="actions-cell">
                             <button class="btn btn-secondary edit-tool-btn" data-id="${tool.id}">编辑</button>
@@ -153,21 +153,33 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const renderCategories = () => {
+        const categoryList = document.getElementById('category-list');
         categoryList.innerHTML = '';
-        categories.forEach(c => {
+        const categoryTree = buildCategoryTree(categories);
+
+        const renderCategoryItem = (category, level) => {
             const el = document.createElement('div');
             el.className = 'category-item';
-            el.dataset.id = c.id;
+            el.dataset.id = category.id;
+            el.style.marginLeft = `${level * 20}px`;
             el.draggable = true;
+
             el.innerHTML = `
-                <span class="category-item-name">${c.name}</span>
+                <span class="category-dragger">::</span>
+                <span class="category-item-name">${category.name}</span>
                 <div class="category-item-actions">
-                    <button class="btn btn-secondary edit-category-btn" data-id="${c.id}">编辑</button>
-                    <button class="delete-category-btn" data-id="${c.id}" aria-label="Delete category">&times;</button>
+                    <button class="btn btn-secondary btn-sm edit-category-btn" data-id="${category.id}">编辑</button>
+                    <button class="btn btn-danger btn-sm delete-category-btn" data-id="${category.id}">删除</button>
                 </div>`;
             categoryList.appendChild(el);
-        });
-        updateCategoryOptions();
+
+            if (category.children.length > 0) {
+                category.children.forEach(child => renderCategoryItem(child, level + 1));
+            }
+        };
+
+        categoryTree.forEach(category => renderCategoryItem(category, 0));
+        renderCategoryDropdowns();
     };
 
     const renderSettings = (settings) => {
@@ -179,11 +191,62 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const updateCategoryOptions = () => {
-        const currentVal = toolCategorySelect.value;
+    const renderCategoryDropdowns = () => {
+        // Preserve current selections
+        const toolCatVal = toolCategorySelect.value;
+        const parentCatVal = categoryParentSelect.value;
+        
+        // Clear existing options
         toolCategorySelect.innerHTML = '<option value="">选择栏目...</option>';
-        categories.forEach(c => toolCategorySelect.add(new Option(c.name, c.id)));
-        toolCategorySelect.value = currentVal;
+        categoryParentSelect.innerHTML = '<option value="">-- 无 (顶级栏目) --</option>';
+
+        const categoryTree = buildCategoryTree(categories);
+
+        categoryTree.forEach(function renderNode(category) {
+             // Populate the parent category dropdown (for the category form)
+            categoryParentSelect.add(new Option(category.name, category.id));
+
+            // Populate the tool category dropdown
+            if (category.children.length > 0) {
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = category.name;
+                
+                // Add the parent category itself as the first, selectable option in its group
+                optgroup.appendChild(new Option(category.name, category.id));
+                
+                // Then, add all its children
+                category.children.forEach(child => {
+                    optgroup.appendChild(new Option(`— ${child.name}`, child.id));
+                });
+                toolCategorySelect.appendChild(optgroup);
+            } else {
+                // If it's a top-level category with no children, just add it
+                toolCategorySelect.add(new Option(category.name, category.id));
+            }
+        });
+        
+        // Restore previous selections
+        toolCategorySelect.value = toolCatVal;
+        categoryParentSelect.value = parentCatVal;
+    };
+
+    const buildCategoryTree = (categories) => {
+        const categoryMap = {};
+        const roots = [];
+        const sortedCategories = [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        sortedCategories.forEach(category => {
+            categoryMap[category.id] = { ...category, children: [] };
+        });
+
+        sortedCategories.forEach(category => {
+            if (category.parentId && categoryMap[category.parentId]) {
+                categoryMap[category.parentId].children.push(categoryMap[category.id]);
+            } else {
+                roots.push(categoryMap[category.id]);
+            }
+        });
+        return roots;
     };
 
     // --- Main Data Loading ---
@@ -381,19 +444,42 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Category Modal Logic ---
     const openCategoryModal = (id = null) => {
         categoryForm.reset();
+        categoryIdInput.value = '';
+        renderCategoryDropdowns(); // First, populate dropdowns
+
         if (id) {
             const category = categories.find(c => c.id === id);
-            categoryFormTitle.textContent = '编辑栏目';
-            categoryIdInput.value = category.id;
-            categoryNameInput.value = category.name;
+            if (category) {
+                categoryFormTitle.textContent = '编辑栏目';
+                categoryIdInput.value = category.id;
+                categoryNameInput.value = category.name;
+                categoryParentSelect.value = category.parentId || '';
+                // Disable selecting itself or its children as parent
+                const childIds = getDescendantIds(id);
+                categoryParentSelect.querySelectorAll('option').forEach(opt => {
+                    opt.disabled = (opt.value === id || childIds.has(opt.value));
+                });
+            }
         } else {
             categoryFormTitle.textContent = '添加新栏目';
-            categoryIdInput.value = '';
         }
         categoryModal.style.display = 'flex';
-        categoryNameInput.focus();
     };
     
+    const getDescendantIds = (parentId) => {
+        const descendants = new Set();
+        const queue = [parentId];
+        while (queue.length > 0) {
+            const currentId = queue.shift();
+            const children = categories.filter(c => c.parentId === currentId);
+            children.forEach(child => {
+                descendants.add(child.id);
+                queue.push(child.id);
+            });
+        }
+        return descendants;
+    };
+
     const closeCategoryModal = () => {
         categoryModal.style.display = 'none';
     };
@@ -404,85 +490,96 @@ document.addEventListener('DOMContentLoaded', () => {
     categoryModalCloseBtn.addEventListener('click', closeCategoryModal);
     cancelCategoryEditBtn.addEventListener('click', closeCategoryModal);
 
-    categoryForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const id = categoryIdInput.value;
-        const name = categoryNameInput.value.trim();
-        if (!name) return;
-
-        const url = id ? `${API_URLS.CATEGORIES}/${id}` : API_URLS.CATEGORIES;
-        const method = id ? 'PUT' : 'POST';
-
-        try {
-            await apiFetch(url, { method, body: JSON.stringify({ name }) });
-            closeCategoryModal();
-            loadAdminData();
-        } catch (err) {
-            alert(`保存栏目失败: ${err.message}`);
-        }
-    });
-
     categoryList.addEventListener('click', async (e) => {
-        const button = e.target.closest('button');
-        if (!button) return;
+        const editBtn = e.target.closest('.edit-category-btn');
+        if (editBtn) {
+            openCategoryModal(editBtn.dataset.id);
+            return;
+        }
 
-        const id = button.dataset.id;
-        if (button.classList.contains('delete-category-btn')) {
-            if (confirm('确定要删除此栏目吗?')) {
-                try {
-                    await apiFetch(`${API_URLS.CATEGORIES}/${id}`, { method: 'DELETE' });
-                    loadAdminData();
-                } catch (err) {
-                    alert(`删除栏目失败: ${err.message}`);
-                }
+        const deleteBtn = e.target.closest('.delete-category-btn');
+        if (deleteBtn) {
+            const id = deleteBtn.dataset.id;
+            const category = categories.find(c => c.id === id);
+            const isParent = categories.some(c => c.parentId === id);
+            let confirmMessage = `确定要删除栏目 "${category.name}" 吗?`;
+            if (isParent) {
+                confirmMessage += "\n\n警告: 此栏目包含子栏目，删除它会使这些子栏目成为顶级栏目。"
             }
-        } else if (button.classList.contains('edit-category-btn')) {
-            openCategoryModal(id);
+
+            if (confirm(confirmMessage)) {
+                deleteCategory(id);
+            }
         }
     });
 
     // DnD for categories
     let draggedItem = null;
     categoryList.addEventListener('dragstart', (e) => {
-        draggedItem = e.target;
-        setTimeout(() => e.target.style.opacity = '0.5', 0);
+        if (e.target.classList.contains('category-item')) {
+            draggedItem = e.target;
+            setTimeout(() => {
+                draggedItem.classList.add('dragging');
+            }, 0);
+        }
     });
-    categoryList.addEventListener('dragend', (e) => {
-        e.target.style.opacity = '1';
-        draggedItem = null;
-        saveCategoryOrderBtn.style.display = 'inline-block';
-    });
+
     categoryList.addEventListener('dragover', (e) => {
         e.preventDefault();
-        const afterElement = [...categoryList.querySelectorAll('.category-item:not(.dragging)')].reduce((closest, child) => {
-            const box = child.getBoundingClientRect();
-            const offset = e.clientY - box.top - box.height / 2;
-            return (offset < 0 && offset > closest.offset) ? { offset, element: child } : closest;
-        }, { offset: Number.NEGATIVE_INFINITY }).element;
-        
-        if (draggedItem && draggedItem !== afterElement) {
+        const container = e.currentTarget;
+        const afterElement = getDragAfterElement(container, e.clientY);
+        if (draggedItem) {
             if (afterElement == null) {
-                categoryList.appendChild(draggedItem);
+                container.appendChild(draggedItem);
             } else {
-                categoryList.insertBefore(draggedItem, afterElement);
+                container.insertBefore(draggedItem, afterElement);
             }
         }
     });
     
-    saveCategoryOrderBtn.addEventListener('click', async () => {
-        const orderedCategories = [...categoryList.querySelectorAll('.category-item')].map((item, index) => ({
-            id: item.dataset.id,
-            order: index
-        }));
-        
-        try {
-            await apiFetch(API_URLS.CATEGORIES, { method: 'PUT', body: JSON.stringify({ updates: orderedCategories }) });
-            saveCategoryOrderBtn.style.display = 'none';
-            loadAdminData();
-        } catch (err) {
-            alert(`保存栏目顺序失败: ${err.message}`);
+    categoryList.addEventListener('dragend', () => {
+        if (draggedItem) {
+            draggedItem.classList.remove('dragging');
+            draggedItem = null;
+            saveCategoryOrderBtn.style.display = 'inline-block';
         }
     });
+    
+    saveCategoryOrderBtn.addEventListener('click', async () => {
+        const updates = [];
+        let order = 0;
+        // This needs to be smarter to handle parent-child relationships
+        // For now, we flatten the list and save order.
+        // A more robust solution would update parentId on drop.
+        const items = Array.from(categoryList.querySelectorAll('.category-item'));
+        items.forEach(item => {
+            updates.push({ id: item.dataset.id, order: order++ });
+        });
+        
+        try {
+            await apiFetch(API_URLS.CATEGORIES, {
+                method: 'PUT',
+                body: JSON.stringify({ updates })
+            });
+            saveCategoryOrderBtn.style.display = 'none';
+            await loadAdminData();
+        } catch (error) {
+            alert(`保存栏目顺序失败: ${error.message}`);
+        }
+    });
+
+    function getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.category-item:not(.dragging)')];
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
 
     // --- Settings CRUD ---
     const setupEventListeners = () => {
@@ -503,12 +600,126 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
+
+        // Category Management
+        addCategoryBtn.addEventListener('click', () => openCategoryModal());
+        categoryForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = categoryIdInput.value;
+            const name = categoryNameInput.value.trim();
+            const parentId = categoryParentSelect.value || null;
+
+            if (!name) return alert('栏目名称不能为空');
+            if (id && id === parentId) return alert('不能将一个栏目设置为自己的父级栏目。');
+
+            const url = id ? `${API_URLS.CATEGORIES}/${id}` : API_URLS.CATEGORIES;
+            const method = id ? 'PUT' : 'POST';
+
+            try {
+                await apiFetch(url, { method, body: JSON.stringify({ name, parentId }) });
+                closeCategoryModal();
+                await loadAdminData();
+            } catch (error) {
+                alert(`保存栏目失败: ${error.message}`);
+            }
+        });
+        categoryModalCloseBtn.addEventListener('click', closeCategoryModal);
+        cancelCategoryEditBtn.addEventListener('click', closeCategoryModal);
+
+        categoryList.addEventListener('click', async (e) => {
+            const editBtn = e.target.closest('.edit-category-btn');
+            if (editBtn) {
+                openCategoryModal(editBtn.dataset.id);
+                return;
+            }
+
+            const deleteBtn = e.target.closest('.delete-category-btn');
+            if (deleteBtn) {
+                const id = deleteBtn.dataset.id;
+                const category = categories.find(c => c.id === id);
+                const isParent = categories.some(c => c.parentId === id);
+                let confirmMessage = `确定要删除栏目 "${category.name}" 吗?`;
+                if (isParent) {
+                    confirmMessage += "\n\n警告: 此栏目包含子栏目，删除它会使这些子栏目成为顶级栏目。"
+                }
+
+                if (confirm(confirmMessage)) {
+                    deleteCategory(id);
+                }
+            }
+        });
+        
+        // Drag and Drop
+        let draggedItem = null;
+        categoryList.addEventListener('dragstart', (e) => {
+            if (e.target.classList.contains('category-item')) {
+                draggedItem = e.target;
+                setTimeout(() => {
+                    draggedItem.classList.add('dragging');
+                }, 0);
+            }
+        });
+
+        categoryList.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const container = e.currentTarget;
+            const afterElement = getDragAfterElement(container, e.clientY);
+            if (draggedItem) {
+                if (afterElement == null) {
+                    container.appendChild(draggedItem);
+                } else {
+                    container.insertBefore(draggedItem, afterElement);
+                }
+            }
+        });
+        
+        categoryList.addEventListener('dragend', () => {
+            if (draggedItem) {
+                draggedItem.classList.remove('dragging');
+                draggedItem = null;
+                saveCategoryOrderBtn.style.display = 'inline-block';
+            }
+        });
+        
+        saveCategoryOrderBtn.addEventListener('click', async () => {
+            const updates = [];
+            let order = 0;
+            // This needs to be smarter to handle parent-child relationships
+            // For now, we flatten the list and save order.
+            // A more robust solution would update parentId on drop.
+            const items = Array.from(categoryList.querySelectorAll('.category-item'));
+            items.forEach(item => {
+                updates.push({ id: item.dataset.id, order: order++ });
+            });
+            
+            try {
+                await apiFetch(API_URLS.CATEGORIES, {
+                    method: 'PUT',
+                    body: JSON.stringify({ updates })
+                });
+                saveCategoryOrderBtn.style.display = 'none';
+                await loadAdminData();
+            } catch (error) {
+                alert(`保存栏目顺序失败: ${error.message}`);
+            }
+        });
+
+        // Tool Management
+        addToolBtn.addEventListener('click', () => openToolModal());
     };
 
     // --- Authentication ---
     const checkAuth = async (password) => {
         try {
-            await apiFetch(API_URLS.AUTH_CHECK, { method: 'POST' }, password); 
+            const res = await fetch(API_URLS.AUTH_LOGIN, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            });
+            if (!res.ok) throw new Error('Unauthorized');
+            const data = await res.json();
+            adminToken = data.token;
+            sessionStorage.setItem('adminToken', adminToken);
             return true;
         } catch (error) {
             return false;
@@ -547,10 +758,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
                 const isValid = await checkAuth(password);
-
                 if (isValid) {
-                    adminPassword = password;
-                    sessionStorage.setItem('adminPassword', password);
                     showAdminPanel();
                 } else {
                     loginError.textContent = '密码错误，请重试。';
@@ -560,29 +768,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        loginError.textContent = '';
-        const password = passwordInput.value;
-        if (!password) {
-            loginError.textContent = '请输入密码。';
-            return;
-        }
-        const isValid = await checkAuth(password);
-
-        if (isValid) {
-            adminPassword = password;
-            sessionStorage.setItem('adminPassword', password);
-            showAdminPanel();
-        } else {
-            loginError.textContent = '密码错误，请重试。';
-            passwordInput.focus();
-        }
-    });
-
     logoutBtn.addEventListener('click', () => {
-        sessionStorage.removeItem('adminPassword');
-        adminPassword = null;
+        sessionStorage.removeItem('adminToken');
+        adminToken = null;
         showLoginView();
     });
 
@@ -591,6 +779,8 @@ document.addEventListener('DOMContentLoaded', () => {
         loginView.style.display = 'block';
         passwordInput.value = '';
         togglePasswordBtn.innerHTML = eyeIcon;
+        sessionStorage.removeItem('adminToken');
+        adminToken = null;
     };
     
     const showAdminPanel = () => {
@@ -645,14 +835,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Initialization ---
     const initialize = async () => {
         togglePasswordBtn.innerHTML = eyeIcon; // Set initial icon
-        if (adminPassword && await checkAuth(adminPassword)) {
+        if (adminToken && await checkAuthWithToken()) {
             showAdminPanel();
-            setupThemeSwitcher(); // Initialize theme switcher only after login
+            setupThemeSwitcher();
         } else {
             showLoginView();
         }
         setupEventListeners();
         setupLogin();
+    };
+
+    // 新增：用token校验有效性
+    const checkAuthWithToken = async () => {
+        if (!adminToken) return false;
+        try {
+            // 任意需要鉴权的API都可
+            await apiFetch(API_URLS.SETTINGS);
+            return true;
+        } catch {
+            return false;
+        }
     };
 
     initialize();

@@ -5,13 +5,33 @@
   "categories": [
     {
       "id": "1",
-      "name": "自制工具",
-      "order": 0
+      "name": "Jim开发的",
+      "order": 0,
+      "parentId": null
     },
     {
       "id": "2",
-      "name": "推荐工具",
-      "order": 1
+      "name": "Jim在用的",
+      "order": 1,
+      "parentId": null
+    },
+    {
+      "id": "3",
+      "name": "好用的新媒体工具",
+      "order": 2,
+      "parentId": "2"
+    },
+    {
+      "id": "1749227277713",
+      "name": "好用的AI工具",
+      "order": 4,
+      "parentId": "2"
+    },
+    {
+      "id": "1749228439411",
+      "name": "在线设计工具",
+      "order": 3,
+      "parentId": "2"
     }
   ],
   "tools": [
@@ -38,23 +58,35 @@
       ]
     },
     {
-      "id": "1749217734196",
-      "title": "baidu",
-      "description": "一个搜索引擎",
-      "url": "baidu.com",
-      "categoryId": "2",
+      "id": "1749227343561",
+      "title": "即梦AI",
+      "description": "字节跳动的AI生图工具，应该是目前最好用的AI生图工具了！",
+      "url": "https://jimeng.jianying.com/",
+      "categoryId": "1749227277713",
       "tags": [
-        "搜索"
+        "AI工具",
+        "AI生图"
       ]
     },
     {
-      "id": "1749218748068",
-      "title": "asfasdfasf",
-      "description": "asfasdfa",
-      "url": "asfasdf",
-      "categoryId": "2",
+      "id": "1749227703653",
+      "title": "cursor",
+      "description": "很好用的AI编程助手。",
+      "url": "https://www.cursor.com/",
+      "categoryId": "1749227277713",
       "tags": [
-        "asdfasd"
+        "AI工具",
+        "AI编程"
+      ]
+    },
+    {
+      "id": "1749228504162",
+      "title": "Figma",
+      "description": "除了原本的UI设计用途，很适合用来制作公众号长图文。",
+      "url": "https://www.figma.com/",
+      "categoryId": "1749228439411",
+      "tags": [
+        "UI设计"
       ]
     }
   ]

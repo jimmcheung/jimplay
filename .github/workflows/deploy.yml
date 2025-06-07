@@ -1,0 +1,38 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]  # 当推送到 main 分支时触发部署
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Install Dependencies
+        run: npm install
+        
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # 部署主站点
+            cd ${{ secrets.MAIN_SITE_PATH }}
+            git pull origin main
+            npm install
+            pm2 restart jimplay || pm2 start server.js --name jimplay -- --port 3000
+
+            # 部署CP站点
+            cd ${{ secrets.CP_SITE_PATH }}
+            git pull origin main
+            npm install
+            pm2 restart cp-site || pm2 start server.js --name cp-site -- --port 3001 

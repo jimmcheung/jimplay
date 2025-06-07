@@ -14,17 +14,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Data Fetching ---
     const fetchData = async () => {
         try {
-            const [toolsRes, categoriesRes, settingsRes] = await Promise.all([
-                fetch('/api/tools'),
-                fetch('/api/categories'),
-                fetch('/api/settings')
-            ]);
-            const tools = await toolsRes.json();
-            const categories = await categoriesRes.json();
-            const settings = await settingsRes.json();
+            const res = await fetch('/api/all-data');
+            if (!res.ok) {
+                throw new Error(`API request failed with status ${res.status}`);
+            }
+            const data = await res.json();
             
-            renderData(tools, categories);
-            renderFooter(settings);
+            renderData(data.categories || []);
+            renderFooter(data.settings || {});
 
         } catch (error) {
             console.error('Failed to fetch data:', error);
@@ -35,41 +32,49 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- Rendering ---
-    const renderData = (tools, categories) => {
+    const renderData = (categories) => {
         if (!timelineContainer) return;
         
         timelineContainer.innerHTML = ''; // Clear existing content
-        timelineContainer.className = 'scroll-area'; // The main container is now the scroll area
+        timelineContainer.className = 'scroll-area';
 
         const timelineWrapper = document.createElement('div');
-        timelineWrapper.className = 'timeline'; // The new wrapper will be the centered timeline
+        timelineWrapper.className = 'timeline';
 
-        const toolsByCategory = categories
-            .map(category => ({
-                ...category,
-                tools: tools.filter(tool => tool.categoryId === category.id)
-            }))
-            .filter(category => category.tools.length > 0);
-
-        toolsByCategory.forEach(category => {
-            const toolCardsHTML = category.tools.map(tool => {
-                const tagsHTML = tool.tags.map(tag => 
-                    `<span class="tag ${getTagClass(tag)}">${tag}</span>`
-                ).join('');
-
-                return `
-                    <a href="${tool.url}" target="_blank" class="tool-card">
-                        <h2>${tool.title}</h2>
-                        <div class="tags">${tagsHTML}</div>
-                        <p>${tool.description}</p>
-                    </a>
-                `;
-            }).join('');
-
+        categories.forEach(category => {
             const timelineGroup = document.createElement('div');
             timelineGroup.className = 'timeline-group';
             timelineGroup.id = `category-${category.id}`;
             
+            let contentHTML = '';
+
+            // Render tools directly under the main category
+            if (category.tools && category.tools.length > 0) {
+                contentHTML += category.tools.map(tool => createToolCardHTML(tool)).join('');
+            }
+
+            // Render subcategories, each with its own set of tools
+            if (category.subcategories && category.subcategories.length > 0) {
+                contentHTML += category.subcategories.map(subcat => {
+                    const toolCardsHTML = subcat.tools.map(tool => createToolCardHTML(tool)).join('');
+                    
+                    // Don't render subcategory card if it has no tools
+                    if (toolCardsHTML.length === 0) return '';
+                    
+                    return `
+                        <div class="subcategory-card">
+                            <h3 class="subcategory-title">${subcat.name}</h3>
+                            <div class="tool-grid">
+                                ${toolCardsHTML}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            // Only render the main category group if it has content
+            if (contentHTML.trim() === '') return;
+
             timelineGroup.innerHTML = `
                 <div class="timeline-group__marker">
                     <h2 class="timeline-group__title" data-scroll-target="category-${category.id}">
@@ -77,13 +82,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     </h2>
                 </div>
                 <div class="timeline-group__content">
-                    ${toolCardsHTML}
+                    ${contentHTML}
                 </div>
             `;
             timelineWrapper.appendChild(timelineGroup);
         });
 
         timelineContainer.appendChild(timelineWrapper);
+    };
+    
+    const createToolCardHTML = (tool) => {
+        const tagsHTML = (tool.tags || []).map(tag => 
+            `<span class="tag ${getTagClass(tag)}">${tag}</span>`
+        ).join('');
+
+        return `
+            <a href="${tool.url}" target="_blank" class="tool-card">
+                <h2>${tool.title}</h2>
+                <div class="tags">${tagsHTML}</div>
+                <p>${tool.description}</p>
+            </a>
+        `;
     };
 
     const renderFooter = (settings) => {

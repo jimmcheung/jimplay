@@ -158,6 +158,13 @@
                     <label for="category-name">栏目名称</label>
                     <input type="text" id="category-name" required>
                 </div>
+                <div class="form-field">
+                    <label for="category-parent">父级栏目 (可选)</label>
+                    <select id="category-parent">
+                        <option value="">-- 无 (顶级栏目) --</option>
+                        <!-- Parent categories will be populated here -->
+                    </select>
+                </div>
                 <div class="form-buttons">
                     <button type="submit" class="btn btn-primary">保存</button>
                     <button type="button" id="cancel-category-edit-btn" class="btn btn-secondary">取消</button>

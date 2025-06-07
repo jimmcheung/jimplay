@@ -1,17 +1,27 @@
-console.log('--- Server.js file execution started ---');
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs/promises');
 const path = require('path');
+const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = 3000;
 const DB_PATH = path.join(__dirname, 'db.json');
-const ADMIN_PASSWORD = 'jimplay.cn'; // 重要：请在部署前修改为一个更安全的密码
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'default_password';
+const JWT_SECRET = process.env.JWT_SECRET || 'default_jwt_secret';
 
 // --- Middleware ---
 app.use(cors());
 app.use(express.json()); // For parsing application/json
+
+// --- Rate Limiter for login ---
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: 'Too many login attempts, please try again later'
+});
 
 // --- Helper Functions ---
 const readDb = async () => {
@@ -35,12 +45,18 @@ const writeDb = async (data) => {
     await fs.writeFile(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
 };
 
-// Admin authentication middleware
-const auth = (req, res, next) => {
+// JWT Auth middleware
+const jwtAuth = (req, res, next) => {
     const authHeader = req.headers.authorization;
-    if (authHeader === ADMIN_PASSWORD) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).send('Unauthorized');
+    }
+    const token = authHeader.split(' ')[1];
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        if (decoded.role !== 'admin') throw new Error();
         next();
-    } else {
+    } catch {
         res.status(401).send('Unauthorized');
     }
 };
@@ -48,14 +64,72 @@ const auth = (req, res, next) => {
 // --- API Routes ---
 const apiRouter = express.Router();
 
+// --- New Combined Data API ---
+apiRouter.get('/all-data', async (req, res) => {
+    try {
+        const db = await readDb();
+        const tools = db.tools || [];
+        const categories = db.categories || [];
+
+        // Create a map for easy category lookup
+        const categoryMap = {};
+        categories.forEach(category => {
+            categoryMap[category.id] = { 
+                ...category, 
+                tools: [], 
+                subcategories: [] 
+            };
+        });
+
+        // Distribute tools into their respective categories
+        tools.forEach(tool => {
+            if (categoryMap[tool.categoryId]) {
+                categoryMap[tool.categoryId].tools.push(tool);
+            }
+        });
+        
+        // Structure categories into main and sub-categories
+        const mainCategories = [];
+        const subcategories = [];
+
+        Object.values(categoryMap).forEach(category => {
+            if (category.parentId) {
+                subcategories.push(category);
+            } else {
+                mainCategories.push(category);
+            }
+        });
+        
+        subcategories.forEach(subcategory => {
+            if (categoryMap[subcategory.parentId]) {
+                categoryMap[subcategory.parentId].subcategories.push(subcategory);
+            }
+        });
+
+        // Sort main categories by order
+        mainCategories.sort((a, b) => a.order - b.order);
+        // Sort sub-categories within each main category by order
+        mainCategories.forEach(cat => {
+            if (cat.subcategories) {
+                cat.subcategories.sort((a, b) => a.order - b.order);
+            }
+        });
+
+        res.json({ categories: mainCategories, settings: db.settings });
+
+    } catch (error) {
+        console.error("Error fetching all data:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+});
+
 // --- Auth API ---
-apiRouter.post('/auth/check', (req, res) => {
-    console.log(`[AUTH] Received check request. Authorization header: ${req.headers.authorization}`);
-    if (req.headers.authorization === ADMIN_PASSWORD) {
-        console.log('[AUTH] Success.');
-        res.status(200).json({ message: 'Authenticated successfully' });
+apiRouter.post('/auth/login', loginLimiter, (req, res) => {
+    const { password } = req.body;
+    if (password === ADMIN_PASSWORD) {
+        const token = jwt.sign({ role: 'admin' }, JWT_SECRET, { expiresIn: '24h' });
+        res.status(200).json({ token });
     } else {
-        console.log('[AUTH] Failed. Incorrect password.');
         res.status(401).send('Unauthorized');
     }
 });
@@ -66,7 +140,7 @@ apiRouter.get('/settings', async (req, res) => {
     res.json(db.settings);
 });
 
-apiRouter.put('/settings', auth, async (req, res) => {
+apiRouter.put('/settings', jwtAuth, async (req, res) => {
     const newSettings = req.body;
     const db = await readDb();
     db.settings = { ...db.settings, ...newSettings }; // Merge settings
@@ -84,15 +158,16 @@ apiRouter.get('/categories', async (req, res) => {
 });
 
 // POST new category
-apiRouter.post('/categories', auth, async (req, res) => {
-    const { name } = req.body;
+apiRouter.post('/categories', jwtAuth, async (req, res) => {
+    const { name, parentId } = req.body;
     if (!name) return res.status(400).json({ message: 'Name is required' });
     
     const db = await readDb();
     const newCategory = {
         id: Date.now().toString(),
         name,
-        order: (db.categories.length > 0) ? Math.max(...db.categories.map(c => c.order)) + 1 : 1
+        order: (db.categories.length > 0) ? Math.max(...db.categories.map(c => c.order)) + 1 : 1,
+        parentId: parentId || null
     };
     db.categories.push(newCategory);
     await writeDb(db);
@@ -100,7 +175,7 @@ apiRouter.post('/categories', auth, async (req, res) => {
 });
 
 // PUT update categories (for reordering and renaming)
-apiRouter.put('/categories', auth, async (req, res) => {
+apiRouter.put('/categories', jwtAuth, async (req, res) => {
     const { updates } = req.body;
     if (!updates || !Array.isArray(updates)) {
         return res.status(400).json({ message: 'Request body must be an object with an "updates" array.' });
@@ -116,6 +191,9 @@ apiRouter.put('/categories', auth, async (req, res) => {
             if (update.name !== undefined) {
                 category.name = update.name;
             }
+            if (update.parentId !== undefined) {
+                category.parentId = update.parentId;
+            }
         }
     });
 
@@ -124,9 +202,9 @@ apiRouter.put('/categories', auth, async (req, res) => {
 });
 
 // PUT update a single category's name
-apiRouter.put('/categories/:id', auth, async (req, res) => {
+apiRouter.put('/categories/:id', jwtAuth, async (req, res) => {
     const { id } = req.params;
-    const { name } = req.body;
+    const { name, parentId } = req.body;
 
     if (!name) {
         return res.status(400).json({ message: 'Name is required' });
@@ -140,19 +218,32 @@ apiRouter.put('/categories/:id', auth, async (req, res) => {
     }
 
     db.categories[categoryIndex].name = name;
+    db.categories[categoryIndex].parentId = parentId || null;
     await writeDb(db);
     res.json(db.categories[categoryIndex]);
 });
 
 // DELETE a category
-apiRouter.delete('/categories/:id', auth, async (req, res) => {
+apiRouter.delete('/categories/:id', jwtAuth, async (req, res) => {
     const { id } = req.params;
     const db = await readDb();
 
-    // Prevent deletion if category is in use
+    // Prevent deletion if category is in use by any tools
     const isCategoryInUse = db.tools.some(tool => tool.categoryId === id);
     if (isCategoryInUse) {
         return res.status(400).json({ message: 'Cannot delete category: it is currently in use by one or more tools.' });
+    }
+
+    // Find children of the category to be deleted
+    const children = db.categories.filter(c => c.parentId === id);
+    if (children.length > 0) {
+        // Set parentId of children to null, making them top-level categories
+        children.forEach(child => {
+            const childIndex = db.categories.findIndex(c => c.id === child.id);
+            if (childIndex !== -1) {
+                db.categories[childIndex].parentId = null;
+            }
+        });
     }
 
     db.categories = db.categories.filter(c => c.id !== id);
@@ -170,7 +261,7 @@ apiRouter.get('/tools', async (req, res) => {
 });
 
 // Add a new tool (Protected)
-apiRouter.post('/tools', auth, async (req, res) => {
+apiRouter.post('/tools', jwtAuth, async (req, res) => {
     const { title, description, url, categoryId, tags } = req.body;
     if (!title || !description || !url || !categoryId) {
         return res.status(400).json({ message: 'Missing required fields' });
@@ -184,7 +275,7 @@ apiRouter.post('/tools', auth, async (req, res) => {
 });
 
 // Update a tool (Protected)
-apiRouter.put('/tools/:id', auth, async (req, res) => {
+apiRouter.put('/tools/:id', jwtAuth, async (req, res) => {
     const { id } = req.params;
     const { title, description, url, categoryId, tags } = req.body;
     const db = await readDb();
@@ -201,7 +292,7 @@ apiRouter.put('/tools/:id', auth, async (req, res) => {
 });
 
 // Delete a tool (Protected)
-apiRouter.delete('/tools/:id', auth, async (req, res) => {
+apiRouter.delete('/tools/:id', jwtAuth, async (req, res) => {
     const { id } = req.params;
     const db = await readDb();
 
@@ -220,6 +311,22 @@ app.use('/api', apiRouter);
 // --- Serve Static Files ---
 // This should come AFTER all API routes.
 app.use(express.static(path.join(__dirname)));
+
+// --- Protect admin.html ---
+app.get('/admin.html', (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(404).send('Not Found');
+    }
+    const token = authHeader.split(' ')[1];
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        if (decoded.role !== 'admin') throw new Error();
+        next();
+    } catch {
+        res.status(404).send('Not Found');
+    }
+});
 
 // --- Catch-all for 404s ---
 // This should be the last middleware.
