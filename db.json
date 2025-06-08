@@ -1,6 +1,11 @@
 {
   "settings": {
-    "icp": "黑ICP备202100xxxx号-1"
+    "icp": "黑ICP备16008632号",
+    "icpUrl": "https://beian.miit.gov.cn/",
+    "title": "JimPlay.cn",
+    "enableRegistration": false,
+    "showSearch": true,
+    "searchPlaceholder": "探索新鲜玩意儿..."
   },
   "categories": [
     {
@@ -88,6 +93,13 @@
       "tags": [
         "UI设计"
       ]
+    }
+  ],
+  "users": [
+    {
+      "id": "user_1",
+      "username": "adminjim",
+      "passwordHash": "$2b$10$M2gTWT2pc3TM5zstlTGtLuznXEcTky2Zcwh2.sUsNOwmWCgkO8Cia"
     }
   ]
 }

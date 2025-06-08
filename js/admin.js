@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginView = document.getElementById('login-view');
     const adminPanel = document.getElementById('admin-panel');
     const loginForm = document.getElementById('login-form');
+    const usernameInput = document.getElementById('username');
     const passwordInput = document.getElementById('password');
     const togglePasswordBtn = document.getElementById('toggle-password');
     const loginError = document.getElementById('login-error');
@@ -18,7 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
         TOOLS: '/api/tools',
         CATEGORIES: '/api/categories',
         SETTINGS: '/api/settings',
-        AUTH_LOGIN: '/api/auth/login'
+        AUTH_LOGIN: '/api/auth/login',
+        USERS: '/api/users'
     };
 
     // --- View Switching ---
@@ -62,10 +64,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const icpInput = document.getElementById('icp-input');
     const icpUrlInput = document.getElementById('icp-url-input');
 
+    // --- User Management Elements ---
+    const userList = document.getElementById('user-list');
+    const addUserBtn = document.getElementById('add-user-btn');
+    const userModal = document.getElementById('user-modal');
+    const userForm = document.getElementById('user-form');
+    const userFormTitle = document.getElementById('user-form-title');
+    const userIdInput = document.getElementById('user-id');
+    const userUsernameInput = document.getElementById('user-username');
+    const userPasswordInput = document.getElementById('user-password');
+    const cancelUserEditBtn = document.getElementById('cancel-user-edit-btn');
+    const userModalCloseBtn = userModal.querySelector('.modal-close-btn');
+
     // --- State ---
     let categories = [];
     let tools = [];
     let settings = {};
+    let users = [];
     let allTags = new Set();
     let suggestionIndex = -1;
     let isComposing = false;
@@ -191,6 +206,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const renderUsers = () => {
+        if (!userList) return;
+        userList.innerHTML = '';
+        users.forEach(user => {
+            const userEl = document.createElement('div');
+            userEl.className = 'user-item';
+            userEl.innerHTML = `
+                <span class="username">${user.username}</span>
+                <div class="user-actions">
+                    <button class="btn btn-secondary btn-sm edit-user-btn" data-id="${user.id}">编辑</button>
+                    <button class="btn btn-danger btn-sm delete-user-btn" data-id="${user.id}">删除</button>
+                </div>
+            `;
+            userList.appendChild(userEl);
+        });
+    };
+
     const renderCategoryDropdowns = () => {
         // Preserve current selections
         const toolCatVal = toolCategorySelect.value;
@@ -249,30 +281,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return roots;
     };
 
-    // --- Main Data Loading ---
-    const loadAdminData = async () => {
-        try {
-            [settings, categories, tools] = await Promise.all([
-                apiFetch(API_URLS.SETTINGS),
-                apiFetch(API_URLS.CATEGORIES),
-                apiFetch(API_URLS.TOOLS)
-            ]);
-            allTags = new Set(tools.flatMap(t => t.tags || []));
-            renderSettings(settings);
-            renderCategories();
-            renderTools(tools, categories);
-        } catch (error) {
-            if (error.message !== 'Unauthorized') {
-                alert(`加载管理数据失败: ${error.message}`);
-            }
-        }
+    // --- Generic Modal Logic ---
+    const openModal = (modalElement) => {
+        if (modalElement) modalElement.style.display = 'flex';
     };
-
-    // --- Modal Logic ---
-    const openModal = () => toolModal.style.display = 'flex';
-    const closeModal = () => {
-        toolModal.style.display = 'none';
-        resetForm();
+    const closeModal = (modalElement) => {
+        if (modalElement) modalElement.style.display = 'none';
     };
 
     const resetForm = () => {
@@ -280,6 +294,130 @@ document.addEventListener('DOMContentLoaded', () => {
         toolIdInput.value = '';
         tagsContainer.querySelectorAll('.tag-pill').forEach(pill => pill.remove());
         tagsInput.value = '';
+    };
+
+    const renderCategoryDropdownsForEdit = (editingId = null) => {
+        const parentCatVal = categoryParentSelect.value;
+        categoryParentSelect.innerHTML = '<option value="">-- 无 (顶级栏目) --</option>';
+        
+        const categoryTree = buildCategoryTree(categories);
+        const disabledIds = editingId ? new Set([editingId, ...getDescendantIds(editingId)]) : new Set();
+
+        function addOptions(categories, prefix = '') {
+            for (const category of categories) {
+                const option = new Option(prefix + category.name, category.id);
+                if (disabledIds.has(category.id)) {
+                    option.disabled = true;
+                }
+                categoryParentSelect.add(option);
+                if (category.children.length > 0) {
+                    addOptions(category.children, prefix + '— ');
+                }
+            }
+        }
+        
+        addOptions(categoryTree);
+        categoryParentSelect.value = parentCatVal;
+    };
+
+    // --- Specific Modal Handlers ---
+    const openToolModal = (id = null) => {
+        resetForm();
+        formTitle.textContent = id ? '编辑工具' : '添加新工具';
+        toolIdInput.value = id || '';
+
+        if (id) {
+            const tool = tools.find(t => t.id === id);
+            if (tool) {
+                toolTitleInput.value = tool.title;
+                toolUrlInput.value = tool.url;
+                toolDescriptionInput.value = tool.description;
+                toolCategorySelect.value = tool.categoryId;
+                (tool.tags || []).forEach(createTagPill);
+            }
+        }
+        openModal(toolModal);
+    };
+
+    const closeToolModal = () => {
+        resetForm();
+        closeModal(toolModal);
+    };
+
+    const openCategoryModal = (id = null) => {
+        categoryForm.reset();
+        const isEditing = id !== null;
+        categoryIdInput.value = id || '';
+        categoryFormTitle.textContent = isEditing ? '编辑栏目' : '添加新栏目';
+        
+        const category = isEditing ? categories.find(c => c.id === id) : null;
+        if (isEditing && category) {
+            categoryNameInput.value = category.name;
+            categoryParentSelect.value = category.parentId || '';
+        }
+
+        renderCategoryDropdownsForEdit(id);
+        openModal(categoryModal);
+    };
+    
+    const openUserModal = (id = null) => {
+        userForm.reset();
+        const isEditing = id !== null;
+        userFormTitle.textContent = isEditing ? '编辑管理员' : '新增管理员';
+        userIdInput.value = id || '';
+
+        if (isEditing) {
+            const user = users.find(u => u.id === id);
+            if(user) userUsernameInput.value = user.username;
+            userPasswordInput.required = false;
+        } else {
+            userPasswordInput.required = true;
+        }
+        openModal(userModal);
+    };
+
+    const getDescendantIds = (parentId) => {
+        const descendants = new Set();
+        const queue = [parentId];
+        while (queue.length > 0) {
+            const currentId = queue.shift();
+            const children = categories.filter(c => c.parentId === currentId);
+            children.forEach(child => {
+                descendants.add(child.id);
+                queue.push(child.id);
+            });
+        }
+        return descendants;
+    };
+    
+    // --- Main Data Loading ---
+    const loadAdminData = async () => {
+        try {
+            // Fetch all data in parallel
+            const [fetchedTools, fetchedCategories, fetchedSettings, fetchedUsers] = await Promise.all([
+                apiFetch(API_URLS.TOOLS),
+                apiFetch(API_URLS.CATEGORIES),
+                apiFetch(API_URLS.SETTINGS),
+                apiFetch(API_URLS.USERS)
+            ]);
+
+            tools = fetchedTools;
+            categories = fetchedCategories;
+            settings = fetchedSettings;
+            users = fetchedUsers;
+
+            // Initial render
+            renderTools(tools, categories);
+            renderCategories();
+            renderSettings(settings);
+            renderUsers();
+
+            // Populate tag suggestions from existing tools
+            allTags = new Set(tools.flatMap(tool => tool.tags));
+        } catch (error) {
+            console.error('Failed to load admin data:', error);
+            showLoginView(); // If any API call fails, show login
+        }
     };
 
     // --- Tag Input Logic ---
@@ -380,229 +518,38 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- Event Handlers ---
-    addToolBtn.addEventListener('click', () => {
-        resetForm();
-        formTitle.textContent = '添加新工具';
-        openModal();
-    });
-
-    modalCloseBtn.addEventListener('click', closeModal);
-    cancelEditBtn.addEventListener('click', closeModal);
-    
-    toolsListSection.addEventListener('click', async (e) => {
-        const target = e.target.closest('button');
-        if (!target) return;
-        
-        const id = target.dataset.id;
-        if (target.classList.contains('delete-tool-btn')) {
-            if (confirm(`确定要删除这个工具吗?`)) {
-                try {
-                    await apiFetch(`${API_URLS.TOOLS}/${id}`, { method: 'DELETE' });
-                    loadAdminData();
-                } catch (err) {
-                    alert(`删除失败: ${err.message}`);
-                }
-            }
-        } else if (target.classList.contains('edit-tool-btn')) {
-            const tool = tools.find(t => t.id === id);
-            if (tool) {
-                resetForm();
-                formTitle.textContent = '编辑工具';
-                toolIdInput.value = tool.id;
-                toolTitleInput.value = tool.title;
-                toolUrlInput.value = tool.url;
-                toolDescriptionInput.value = tool.description;
-                toolCategorySelect.value = tool.categoryId;
-                (tool.tags || []).forEach(createTagPill);
-                openModal();
-            }
-        }
-    });
-
-    editForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const id = toolIdInput.value;
-        const data = {
-            title: toolTitleInput.value,
-            url: toolUrlInput.value,
-            description: toolDescriptionInput.value,
-            categoryId: toolCategorySelect.value,
-            tags: getCurrentTags()
-        };
-        const method = id ? 'PUT' : 'POST';
-        const url = id ? `${API_URLS.TOOLS}/${id}` : API_URLS.TOOLS;
-        
-        try {
-            await apiFetch(url, { method, body: JSON.stringify(data) });
-            closeModal();
-            loadAdminData();
-        } catch (err) {
-            alert(`保存失败: ${err.message}`);
-        }
-    });
-
-    // --- Category Modal Logic ---
-    const openCategoryModal = (id = null) => {
-        categoryForm.reset();
-        categoryIdInput.value = '';
-        renderCategoryDropdowns(); // First, populate dropdowns
-
-        if (id) {
-            const category = categories.find(c => c.id === id);
-            if (category) {
-                categoryFormTitle.textContent = '编辑栏目';
-                categoryIdInput.value = category.id;
-                categoryNameInput.value = category.name;
-                categoryParentSelect.value = category.parentId || '';
-                // Disable selecting itself or its children as parent
-                const childIds = getDescendantIds(id);
-                categoryParentSelect.querySelectorAll('option').forEach(opt => {
-                    opt.disabled = (opt.value === id || childIds.has(opt.value));
-                });
-            }
-        } else {
-            categoryFormTitle.textContent = '添加新栏目';
-        }
-        categoryModal.style.display = 'flex';
-    };
-    
-    const getDescendantIds = (parentId) => {
-        const descendants = new Set();
-        const queue = [parentId];
-        while (queue.length > 0) {
-            const currentId = queue.shift();
-            const children = categories.filter(c => c.parentId === currentId);
-            children.forEach(child => {
-                descendants.add(child.id);
-                queue.push(child.id);
-            });
-        }
-        return descendants;
-    };
-
-    const closeCategoryModal = () => {
-        categoryModal.style.display = 'none';
-    };
-
-    // --- Category Management Event Handlers ---
-    addCategoryBtn.addEventListener('click', () => openCategoryModal());
-
-    categoryModalCloseBtn.addEventListener('click', closeCategoryModal);
-    cancelCategoryEditBtn.addEventListener('click', closeCategoryModal);
-
-    categoryList.addEventListener('click', async (e) => {
-        const editBtn = e.target.closest('.edit-category-btn');
-        if (editBtn) {
-            openCategoryModal(editBtn.dataset.id);
-            return;
-        }
-
-        const deleteBtn = e.target.closest('.delete-category-btn');
-        if (deleteBtn) {
-            const id = deleteBtn.dataset.id;
-            const category = categories.find(c => c.id === id);
-            const isParent = categories.some(c => c.parentId === id);
-            let confirmMessage = `确定要删除栏目 "${category.name}" 吗?`;
-            if (isParent) {
-                confirmMessage += "\n\n警告: 此栏目包含子栏目，删除它会使这些子栏目成为顶级栏目。"
-            }
-
-            if (confirm(confirmMessage)) {
-                deleteCategory(id);
-            }
-        }
-    });
-
-    // DnD for categories
-    let draggedItem = null;
-    categoryList.addEventListener('dragstart', (e) => {
-        if (e.target.classList.contains('category-item')) {
-            draggedItem = e.target;
-            setTimeout(() => {
-                draggedItem.classList.add('dragging');
-            }, 0);
-        }
-    });
-
-    categoryList.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        const container = e.currentTarget;
-        const afterElement = getDragAfterElement(container, e.clientY);
-        if (draggedItem) {
-            if (afterElement == null) {
-                container.appendChild(draggedItem);
-            } else {
-                container.insertBefore(draggedItem, afterElement);
-            }
-        }
-    });
-    
-    categoryList.addEventListener('dragend', () => {
-        if (draggedItem) {
-            draggedItem.classList.remove('dragging');
-            draggedItem = null;
-            saveCategoryOrderBtn.style.display = 'inline-block';
-        }
-    });
-    
-    saveCategoryOrderBtn.addEventListener('click', async () => {
-        const updates = [];
-        let order = 0;
-        // This needs to be smarter to handle parent-child relationships
-        // For now, we flatten the list and save order.
-        // A more robust solution would update parentId on drop.
-        const items = Array.from(categoryList.querySelectorAll('.category-item'));
-        items.forEach(item => {
-            updates.push({ id: item.dataset.id, order: order++ });
-        });
-        
-        try {
-            await apiFetch(API_URLS.CATEGORIES, {
-                method: 'PUT',
-                body: JSON.stringify({ updates })
-            });
-            saveCategoryOrderBtn.style.display = 'none';
-            await loadAdminData();
-        } catch (error) {
-            alert(`保存栏目顺序失败: ${error.message}`);
-        }
-    });
-
-    function getDragAfterElement(container, y) {
-        const draggableElements = [...container.querySelectorAll('.category-item:not(.dragging)')];
-        return draggableElements.reduce((closest, child) => {
-            const box = child.getBoundingClientRect();
-            const offset = y - box.top - box.height / 2;
-            if (offset < 0 && offset > closest.offset) {
-                return { offset: offset, element: child };
-            } else {
-                return closest;
-            }
-        }, { offset: Number.NEGATIVE_INFINITY }).element;
-    }
-
-    // --- Settings CRUD ---
     const setupEventListeners = () => {
-        if (settingsForm) {
-            settingsForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const icpInput = document.getElementById('icp-input');
-                const icpUrlInput = document.getElementById('icp-url-input');
-                const newSettings = {
-                    icp: icpInput.value.trim(),
-                    icpUrl: icpUrlInput.value.trim()
-                };
-                try {
-                    await updateSettings(newSettings);
-                    alert('设置已保存！');
-                } catch (error) {
-                    alert('保存失败，请稍后重试。');
-                }
-            });
-        }
+        // Modals
+        modalCloseBtn.addEventListener('click', closeToolModal);
+        cancelEditBtn.addEventListener('click', closeToolModal);
+        categoryModalCloseBtn.addEventListener('click', () => closeModal(categoryModal));
+        cancelCategoryEditBtn.addEventListener('click', () => closeModal(categoryModal));
+        userModalCloseBtn.addEventListener('click', () => closeModal(userModal));
+        cancelUserEditBtn.addEventListener('click', () => closeModal(userModal));
 
-        // Category Management
-        addCategoryBtn.addEventListener('click', () => openCategoryModal());
+        // Forms
+        editForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = toolIdInput.value;
+            const data = {
+                title: toolTitleInput.value,
+                url: toolUrlInput.value,
+                description: toolDescriptionInput.value,
+                categoryId: toolCategorySelect.value,
+                tags: getCurrentTags()
+            };
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `${API_URLS.TOOLS}/${id}` : API_URLS.TOOLS;
+            
+            try {
+                await apiFetch(url, { method, body: JSON.stringify(data) });
+                closeToolModal();
+                await loadAdminData();
+            } catch (err) {
+                alert(`保存失败: ${err.message}`);
+            }
+        });
+
         categoryForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const id = categoryIdInput.value;
@@ -617,14 +564,76 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 await apiFetch(url, { method, body: JSON.stringify({ name, parentId }) });
-                closeCategoryModal();
+                closeModal(categoryModal);
                 await loadAdminData();
             } catch (error) {
                 alert(`保存栏目失败: ${error.message}`);
             }
         });
-        categoryModalCloseBtn.addEventListener('click', closeCategoryModal);
-        cancelCategoryEditBtn.addEventListener('click', closeCategoryModal);
+
+        userForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = userIdInput.value;
+            const username = userUsernameInput.value.trim();
+            const password = userPasswordInput.value.trim();
+
+            const payload = { username };
+            if (password) {
+                payload.password = password;
+            }
+
+            // In add mode, password is required
+            if (!id && !password) {
+                alert('新增管理员时必须设置密码。');
+                return;
+            }
+
+            const url = id ? `${API_URLS.USERS}/${id}` : API_URLS.USERS;
+            const method = id ? 'PUT' : 'POST';
+
+            try {
+                await apiFetch(url, { method, body: JSON.stringify(payload) });
+                closeModal(userModal);
+                await loadAdminData();
+            } catch (error) {
+                alert(`保存管理员失败: ${error.message}`);
+            }
+        });
+        
+        settingsForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newSettings = {
+                icp: icpInput.value.trim(),
+                icpUrl: icpUrlInput.value.trim()
+            };
+            try {
+                await apiFetch(API_URLS.SETTINGS, { method: 'PUT', body: JSON.stringify(newSettings) });
+                alert('设置已保存！');
+                settings.icp = newSettings.icp;
+                settings.icpUrl = newSettings.icpUrl;
+            } catch (error) {
+                alert('保存失败，请稍后重试。');
+            }
+        });
+
+        // Event delegation for dynamically created buttons
+        toolsListSection.addEventListener('click', (e) => {
+            const target = e.target.closest('button');
+            if (!target) return;
+            const id = target.dataset.id;
+            if (target.classList.contains('delete-tool-btn')) {
+                if (confirm('确定要删除这个工具吗?')) {
+                    apiFetch(`${API_URLS.TOOLS}/${id}`, { method: 'DELETE' })
+                        .then(() => loadAdminData())
+                        .catch(err => alert(`删除失败: ${err.message}`));
+                }
+            } else if (target.classList.contains('edit-tool-btn')) {
+                openToolModal(id);
+            }
+        });
+        
+        // Category Management
+        addCategoryBtn.addEventListener('click', () => openCategoryModal());
 
         categoryList.addEventListener('click', async (e) => {
             const editBtn = e.target.closest('.edit-category-btn');
@@ -632,24 +641,46 @@ document.addEventListener('DOMContentLoaded', () => {
                 openCategoryModal(editBtn.dataset.id);
                 return;
             }
-
             const deleteBtn = e.target.closest('.delete-category-btn');
             if (deleteBtn) {
                 const id = deleteBtn.dataset.id;
                 const category = categories.find(c => c.id === id);
+                if (!category) return;
                 const isParent = categories.some(c => c.parentId === id);
                 let confirmMessage = `确定要删除栏目 "${category.name}" 吗?`;
                 if (isParent) {
-                    confirmMessage += "\n\n警告: 此栏目包含子栏目，删除它会使这些子栏目成为顶级栏目。"
+                    confirmMessage += "\n\n警告: 此栏目包含子栏目，删除它会使这些子栏目成为顶级栏目。";
                 }
-
                 if (confirm(confirmMessage)) {
-                    deleteCategory(id);
+                    apiFetch(`${API_URLS.CATEGORIES}/${id}`, { method: 'DELETE' })
+                        .then(() => loadAdminData())
+                        .catch(err => alert(`删除失败: ${err.message}`));
                 }
             }
         });
-        
-        // Drag and Drop
+
+        // User Management
+        addUserBtn.addEventListener('click', () => openUserModal());
+
+        userList.addEventListener('click', (e) => {
+            const target = e.target;
+            const id = target.dataset.id;
+            if (target.classList.contains('delete-user-btn')) {
+                if (users.length <= 1) {
+                    alert('不能删除最后一个管理员账户。');
+                    return;
+                }
+                if (confirm('确定要删除该管理员吗？此操作无法撤销。')) {
+                    apiFetch(`${API_URLS.USERS}/${id}`, { method: 'DELETE' })
+                        .then(() => loadAdminData())
+                        .catch(err => alert(`删除失败: ${err.message}`));
+                }
+            } else if (target.classList.contains('edit-user-btn')) {
+                openUserModal(id);
+            }
+        });
+
+        // Drag and drop for categories
         let draggedItem = null;
         categoryList.addEventListener('dragstart', (e) => {
             if (e.target.classList.contains('category-item')) {
@@ -704,68 +735,93 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Tool Management
-        addToolBtn.addEventListener('click', () => openToolModal());
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.category-item:not(.dragging)')];
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
     };
 
     // --- Authentication ---
     const checkAuth = async (password) => {
         try {
-            const res = await fetch(API_URLS.AUTH_LOGIN, {
+            const response = await fetch(API_URLS.AUTH_LOGIN, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ password })
             });
-            if (!res.ok) throw new Error('Unauthorized');
-            const data = await res.json();
-            adminToken = data.token;
-            sessionStorage.setItem('adminToken', adminToken);
-            return true;
+
+            if (response.ok) {
+                const data = await response.json();
+                adminToken = data.token;
+                sessionStorage.setItem('adminToken', adminToken);
+                showAdminPanel();
+                await loadAdminData();
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                loginError.textContent = errorData.message || 'Incorrect password.';
+                passwordInput.focus();
+            }
         } catch (error) {
-            return false;
+            console.error('Login request failed:', error);
+            loginError.textContent = 'Login failed. Check console for details.';
         }
     };
     
     const setupLogin = () => {
-        const loginForm = document.getElementById('login-form');
-        const passwordInput = document.getElementById('password');
-        const loginError = document.getElementById('login-error');
-        const togglePasswordBtn = document.getElementById('toggle-password');
+        // Password visibility toggle
+        togglePasswordBtn.innerHTML = eyeIcon;
+        togglePasswordBtn.addEventListener('click', () => {
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                togglePasswordBtn.innerHTML = eyeOffIcon;
+            } else {
+                passwordInput.type = 'password';
+                togglePasswordBtn.innerHTML = eyeIcon;
+            }
+        });
 
-        const showIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>`;
-        const hideIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.243 4.243l-4.243-4.243" /></svg>`;
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+            loginError.textContent = '';
+            
+            if (!username || !password) {
+                loginError.textContent = 'Please enter both username and password.';
+                return;
+            }
 
-        if (togglePasswordBtn) {
-            togglePasswordBtn.innerHTML = showIcon;
-            togglePasswordBtn.addEventListener('click', () => {
-                if (passwordInput.type === 'password') {
-                    passwordInput.type = 'text';
-                    togglePasswordBtn.innerHTML = hideIcon;
-                } else {
-                    passwordInput.type = 'password';
-                    togglePasswordBtn.innerHTML = showIcon;
-                }
-            });
-        }
+            try {
+                const response = await fetch(API_URLS.AUTH_LOGIN, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
 
-        if (loginForm) {
-            loginForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                loginError.textContent = '';
-                const password = passwordInput.value;
-                if (!password) {
-                    loginError.textContent = '请输入密码。';
-                    return;
-                }
-                const isValid = await checkAuth(password);
-                if (isValid) {
+                if (response.ok) {
+                    const data = await response.json();
+                    adminToken = data.token;
+                    sessionStorage.setItem('adminToken', adminToken);
                     showAdminPanel();
+                    await loadAdminData();
                 } else {
-                    loginError.textContent = '密码错误，请重试。';
+                    const errorData = await response.json().catch(() => ({}));
+                    loginError.textContent = errorData.message || 'Invalid username or password.';
                     passwordInput.focus();
                 }
-            });
-        }
+            } catch (error) {
+                console.error('Login request failed:', error);
+                loginError.textContent = 'Login failed. Check console for details.';
+            }
+        });
     };
 
     logoutBtn.addEventListener('click', () => {
@@ -834,18 +890,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Initialization ---
     const initialize = async () => {
-        togglePasswordBtn.innerHTML = eyeIcon; // Set initial icon
+        setupLogin();
+        setupThemeSwitcher();
+        setupEventListeners();
+
         if (adminToken && await checkAuthWithToken()) {
             showAdminPanel();
-            setupThemeSwitcher();
         } else {
             showLoginView();
         }
-        setupEventListeners();
-        setupLogin();
     };
 
-    // 新增：用token校验有效性
+    // Check if the stored token is still valid
     const checkAuthWithToken = async () => {
         if (!adminToken) return false;
         try {

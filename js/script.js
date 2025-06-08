@@ -116,22 +116,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const TAG_COLORS = ['red', 'blue', 'green', 'yellow', 'purple', 'pink', 'indigo', 'cyan', 'orange'];
+
     const getTagClass = (tag) => {
-        const lowerTag = tag.toLowerCase();
-        const mappings = {
-            '照片对比': 'color-red',
-            '图片处理': 'color-red',
-            '自制工具': 'color-blue',
-            '开发': 'color-blue',
-            'dev': 'color-blue',
-            '浏览器插件': 'color-green',
-            '效率': 'color-green',
-            '排版工具': 'color-yellow',
-            '设计': 'color-yellow',
-            'svg排版': 'color-yellow',
-            '公众号排版': 'color-yellow'
-        };
-        return mappings[lowerTag] || 'color-gray';
+        // Simple hash function to get a consistent color for a tag
+        let hash = 0;
+        for (let i = 0; i < tag.length; i++) {
+            hash += tag.charCodeAt(i);
+        }
+        const colorIndex = hash % TAG_COLORS.length;
+        return `color-${TAG_COLORS[colorIndex]}`;
     };
 
     // --- UI Interactions ---

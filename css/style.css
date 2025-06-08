@@ -16,6 +16,11 @@
     --tag-blue-bg: #e0f2fe; --tag-blue-text: #0284c7;
     --tag-green-bg: #dcfce7; --tag-green-text: #16a34a;
     --tag-yellow-bg: #fef9c3; --tag-yellow-text: #ca8a04;
+    --tag-purple-bg: #f3e8ff; --tag-purple-text: #7e22ce;
+    --tag-pink-bg: #fce7f3; --tag-pink-text: #be185d;
+    --tag-indigo-bg: #e0e7ff; --tag-indigo-text: #4338ca;
+    --tag-cyan-bg: #cffafe; --tag-cyan-text: #0891b2;
+    --tag-orange-bg: #ffedd5; --tag-orange-text: #c2410c;
     --tag-gray-bg: #e9ecef; --tag-gray-text: #4b5563;
 }
 
@@ -36,6 +41,11 @@ html[data-theme='dark'] {
     --tag-blue-bg: #1e3a8a; --tag-blue-text: #90caf9;
     --tag-green-bg: #1b3d30; --tag-green-text: #a5d6a7;
     --tag-yellow-bg: #42402f; --tag-yellow-text: #fff59d;
+    --tag-purple-bg: #3b1f50; --tag-purple-text: #d8b4fe;
+    --tag-pink-bg: #501f37; --tag-pink-text: #f9a8d4;
+    --tag-indigo-bg: #282f65; --tag-indigo-text: #c7d2fe;
+    --tag-cyan-bg: #164e63; --tag-cyan-text: #a5f3fc;
+    --tag-orange-bg: #4b2a13; --tag-orange-text: #fed7aa;
     --tag-gray-bg: #374151; --tag-gray-text: #d1d5db;
 }
 
@@ -259,6 +269,11 @@ main#timeline-container::-webkit-scrollbar-thumb {
 .tag.color-blue { background-color: var(--tag-blue-bg); color: var(--tag-blue-text); }
 .tag.color-green { background-color: var(--tag-green-bg); color: var(--tag-green-text); }
 .tag.color-yellow { background-color: var(--tag-yellow-bg); color: var(--tag-yellow-text); }
+.tag.color-purple { background-color: var(--tag-purple-bg); color: var(--tag-purple-text); }
+.tag.color-pink { background-color: var(--tag-pink-bg); color: var(--tag-pink-text); }
+.tag.color-indigo { background-color: var(--tag-indigo-bg); color: var(--tag-indigo-text); }
+.tag.color-cyan { background-color: var(--tag-cyan-bg); color: var(--tag-cyan-text); }
+.tag.color-orange { background-color: var(--tag-orange-bg); color: var(--tag-orange-text); }
 .tag.color-gray { background-color: var(--tag-gray-bg); color: var(--tag-gray-text); }
 
 /* --- Subcategory Card --- */
