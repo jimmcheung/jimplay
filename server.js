@@ -9,7 +9,8 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 const PORT = 3000;
 const DB_PATH = path.join(__dirname, 'db.json');
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'default_password';
+// For better security, it's recommended to set this password via an environment variable.
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'jimplay.cn';
 const JWT_SECRET = process.env.JWT_SECRET || 'default_jwt_secret';
 
 // --- Middleware ---
