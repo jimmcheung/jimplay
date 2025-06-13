@@ -32,4 +32,7 @@ build/
 pids
 *.pid
 *.seed
-*.pid.lock 
+*.pid.lock
+
+# Nginx configuration file
+nginx.conf 
