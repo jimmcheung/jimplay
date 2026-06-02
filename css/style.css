@@ -408,23 +408,38 @@ main#timeline-container::-webkit-scrollbar-thumb {
 
 /* --- Responsive Design --- */
 @media (max-width: 768px) {
-    /* Switch to a simpler, non-timeline layout on mobile */
-    main#timeline-container {
-        padding: 80px 1rem 0;
-        margin-top: 0;
-        overflow-y: visible; /* Let the body scroll on mobile */
-    }
 
-    /* Allow body scrolling on mobile */
+    /* Lock layout to viewport */
     #main-content {
-        overflow: visible;
-        height: auto;
-        min-height: 100vh;
+        overflow: hidden;
+        height: 100vh;
+        height: 100dvh;
     }
 
-    .timeline-group {
-        display: block; /* Remove grid layout */
-        margin-bottom: 2.5rem;
+    /* Fix header to viewport on mobile */
+    .global-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+    }
+
+    /* Fix footer to viewport on mobile */
+    .site-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 1rem;
+        font-size: 0.8rem;
+    }
+
+    /* Content scrolls between fixed header and footer */
+    main#timeline-container {
+        padding: 80px 1rem 80px;
+        margin-top: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     /* Hide the timeline's vertical line */
@@ -434,6 +449,12 @@ main#timeline-container::-webkit-scrollbar-thumb {
 
     .timeline {
         padding: 0;
+    }
+
+    /* Stack category title and content vertically */
+    .timeline-group {
+        display: block;
+        margin-bottom: 2.5rem;
     }
 
     /* Hide the circular marker */
