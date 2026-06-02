@@ -572,17 +572,17 @@ main#timeline-container::-webkit-scrollbar-thumb {
 /* --- Video Card (Large card with thumbnail) --- */
 .tool-card--video {
     display: flex;
-    gap: 1.25rem;
+    gap: 0;
     padding: 0;
     overflow: hidden;
+    align-items: stretch;
 }
 .tool-card__media {
     position: relative;
-    width: 240px;
-    min-height: 140px;
+    width: 220px;
+    min-height: 150px;
     flex-shrink: 0;
     overflow: hidden;
-    border-radius: 16px 0 0 16px;
 }
 .tool-card__thumbnail {
     width: 100%;
@@ -613,15 +613,26 @@ main#timeline-container::-webkit-scrollbar-thumb {
 }
 .tool-card__body {
     flex: 1;
-    padding: 1.25rem 1.25rem 1.25rem 0;
+    padding: 1.25rem;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 .tool-card__body h2 {
-    margin: 0 0 0.5rem;
-    font-size: 1.15rem;
+    margin: 0 0 0.4rem;
+    font-size: 1.05rem;
+}
+.tool-card__body .tags {
+    margin-bottom: 0.4rem;
 }
 .tool-card__body p {
     margin: 0;
+    font-size: 0.85rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 /* --- Webpage Card (with favicon) --- */
@@ -639,7 +650,12 @@ main#timeline-container::-webkit-scrollbar-thumb {
 }
 .tool-card--webpage .tool-card__head h2 {
     margin: 0;
-    font-size: 1.15rem;
+    font-size: 1.1rem;
+}
+
+/* --- Video Card in Grid --- */
+.tool-grid .tool-card--video {
+    grid-column: 1 / -1; /* Video cards take full width in grid */
 }
 
 /* --- Responsive --- */
@@ -650,7 +666,6 @@ main#timeline-container::-webkit-scrollbar-thumb {
     .tool-card__media {
         width: 100%;
         min-height: 180px;
-        border-radius: 16px 16px 0 0;
     }
     .tool-card__body {
         padding: 1rem;
