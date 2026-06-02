@@ -14,14 +14,20 @@ const JWT_SECRET = process.env.JWT_SECRET || 'default_jwt_secret';
 const ADMIN_PATH = process.env.ADMIN_PATH || '/admin.html';
 
 // --- Middleware ---
+app.set('trust proxy', 1); // Trust Nginx proxy headers
 app.use(cors());
 app.use(express.json()); // For parsing application/json
 
 // --- Rate Limiter for login ---
+const WHITELIST_IPS = (process.env.WHITELIST_IPS || '').split(',').map(s => s.trim()).filter(Boolean);
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 3,
-    message: 'Too many login attempts, please try again later'
+    message: 'Too many login attempts, please try again later',
+    skip: (req) => {
+        const clientIp = req.ip || req.connection.remoteAddress;
+        return WHITELIST_IPS.some(ip => clientIp.includes(ip));
+    }
 });
 
 // --- Helper Functions ---
