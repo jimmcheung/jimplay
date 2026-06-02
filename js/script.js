@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Render subcategories, each with its own set of tools
             if (category.subcategories && category.subcategories.length > 0) {
                 contentHTML += category.subcategories.map(subcat => {
-                    const toolCardsHTML = subcat.tools.map(tool => createToolCardHTML(tool)).join('');
+                    const toolCardsHTML = subcat.tools.slice(0, 3).map(tool => createToolCardHTML(tool)).join('');
                     
                     // Don't render subcategory card if it has no tools
                     if (toolCardsHTML.length === 0) return '';
