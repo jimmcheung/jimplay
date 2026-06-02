@@ -349,7 +349,7 @@ app.use('/api', apiRouter);
 // Block direct access to admin.html (now served at hidden path)
 app.use((req, res, next) => {
     if (req.path === '/admin.html') {
-        return res.status(404).send('Not Found');
+        return res.status(404).sendFile(path.join(__dirname, '404.html'));
     }
     next();
 });
@@ -365,7 +365,7 @@ app.get(ADMIN_PATH, (req, res, next) => {
 // This should be the last middleware.
 app.use((req, res, next) => {
     console.log(`[404] Unmatched route: ${req.method} ${req.originalUrl}`);
-    res.status(404).send('Not Found');
+    res.status(404).sendFile(path.join(__dirname, '404.html'));
 });
 
 // --- Server Start ---

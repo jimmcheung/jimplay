@@ -13,12 +13,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.min.css">
     <script src="js/script.js" defer></script>
 </head>
 <body>
-    <div class="background-noise"></div>
-
     <div id="main-content">
         <header class="global-header">
             <a href="/" class="logo">
@@ -80,7 +78,7 @@
             <button class="donate-modal-close" aria-label="Close">&times;</button>
             <h3 class="donate-modal-title">感谢支持</h3>
             <div class="donate-qr-container">
-                <img src="assets/donate-qr.jpeg" alt="打赏二维码" id="donate-qr">
+                <img src="assets/donate-qr.jpeg" alt="打赏二维码" id="donate-qr" loading="lazy">
             </div>
             <p class="donate-modal-text">扫码支持作者继续创作</p>
         </div>

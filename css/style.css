@@ -171,8 +171,6 @@ main#timeline-container::-webkit-scrollbar-thumb {
     font-weight: 500;
     font-size: 1.1rem;
     margin: 0;
-    position: sticky;
-    top: 1.5em;
     padding-right: 2rem;
     cursor: pointer;
     position: relative;

@@ -226,7 +226,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Initialization ---
     const init = () => {
-        const savedTheme = localStorage.getItem('theme') || 'light';
+        const savedTheme = localStorage.getItem('theme') || 
+            (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
         htmlEl.setAttribute('data-theme', savedTheme);
         themeBtns.forEach(btn => {
             if (btn.dataset.theme === savedTheme) {
