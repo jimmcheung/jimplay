@@ -11,6 +11,7 @@ const PORT = 3000;
 const DB_PATH = path.join(__dirname, 'db.json');
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'default_password';
 const JWT_SECRET = process.env.JWT_SECRET || 'default_jwt_secret';
+const ADMIN_PATH = process.env.ADMIN_PATH || '/admin.html';
 
 // --- Middleware ---
 app.use(cors());
@@ -19,7 +20,7 @@ app.use(express.json()); // For parsing application/json
 // --- Rate Limiter for login ---
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 5,
+    max: 3,
     message: 'Too many login attempts, please try again later'
 });
 
@@ -310,22 +311,19 @@ app.use('/api', apiRouter);
 
 // --- Serve Static Files ---
 // This should come AFTER all API routes.
-app.use(express.static(path.join(__dirname)));
-
-// --- Protect admin.html ---
-app.get('/admin.html', (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+// Block direct access to admin.html (now served at hidden path)
+app.use((req, res, next) => {
+    if (req.path === '/admin.html') {
         return res.status(404).send('Not Found');
     }
-    const token = authHeader.split(' ')[1];
-    try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        if (decoded.role !== 'admin') throw new Error();
-        next();
-    } catch {
-        res.status(404).send('Not Found');
-    }
+    next();
+});
+app.use(express.static(path.join(__dirname)));
+
+// --- Protect admin page (hidden path) ---
+app.get(ADMIN_PATH, (req, res, next) => {
+    // Serve admin.html at the hidden path (JWT check removed for login page)
+    res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
 // --- Catch-all for 404s ---
@@ -338,5 +336,4 @@ app.use((req, res, next) => {
 // --- Server Start ---
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
-    console.log('Admin password is: ' + ADMIN_PASSWORD);
 }); 
