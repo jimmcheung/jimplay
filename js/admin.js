@@ -582,6 +582,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Settings CRUD ---
+    const updateSettings = async (newSettings) => {
+        await apiFetch(API_URLS.SETTINGS, {
+            method: 'PUT',
+            body: JSON.stringify(newSettings)
+        });
+    };
+
     const setupEventListeners = () => {
         if (settingsForm) {
             settingsForm.addEventListener('submit', async (e) => {
