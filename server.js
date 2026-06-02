@@ -308,7 +308,7 @@ apiRouter.post('/tools', jwtAuth, async (req, res) => {
     }
 
     const db = await readDb();
-    const newTool = { id: Date.now().toString(), title, description, url, categoryId, tags: tags || [], 
+    const newTool = { id: Date.now().toString(), title, description, url, categoryId, tags: tags || [], createdAt: new Date().toISOString(),
         ...(thumbnail && { thumbnail }), ...(embedUrl && { embedUrl }), 
         ...(type && { type }), ...(platform && { platform }), ...(favicon && { favicon }) };
     db.tools.push(newTool);

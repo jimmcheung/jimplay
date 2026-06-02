@@ -117,16 +117,22 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- Render Functions ---
-    const renderTools = (tools, categories) => {
+    const formatDate = (iso) => {
+        if (!iso) return '-';
+        const d = new Date(iso);
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    };
+
+    const renderTools = (toolList, categories) => {
         const toolsListSection = document.getElementById('tools-list');
         if (!toolsListSection) return;
 
-        if (tools.length === 0) {
+        if (toolList.length === 0) {
             toolsListSection.innerHTML = '<p class="empty-state-message">还没有工具，点击"新建工具"来添加一个吧。</p>';
             return;
         }
 
-        const tableRows = tools.map(tool => {
+        const tableRows = toolList.map(tool => {
             const category = categories.find(c => c.id === tool.categoryId);
             const categoryName = category ? (category.parentId ? `${categories.find(p=>p.id===category.parentId).name} / ${category.name}` : category.name) : '未分类';
             return `
@@ -138,6 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </td>
                     <td><span class="tag-cell">${categoryName}</span></td>
+                    <td class="date-cell">${formatDate(tool.createdAt)}</td>
                     <td>
                         <div class="actions-cell">
                             <button class="btn btn-secondary edit-tool-btn" data-id="${tool.id}">编辑</button>
@@ -154,6 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <tr>
                         <th>标题</th>
                         <th>栏目</th>
+                        <th>创建时间</th>
                         <th class="actions-header">操作</th>
                     </tr>
                 </thead>
@@ -269,16 +277,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 apiFetch(API_URLS.CATEGORIES),
                 apiFetch(API_URLS.TOOLS)
             ]);
+            // Sort by createdAt descending (newest first)
+            tools.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
             allTags = new Set(tools.flatMap(t => t.tags || []));
             renderSettings(settings);
             renderCategories();
-            renderTools(tools, categories);
+            renderFilteredTools();
         } catch (error) {
             if (error.message !== 'Unauthorized') {
                 alert(`加载管理数据失败: ${error.message}`);
             }
         }
     };
+
+    // --- Tool Search ---
+    const toolSearchInput = document.getElementById('tool-search');
+    const renderFilteredTools = () => {
+        const query = (toolSearchInput?.value || '').trim().toLowerCase();
+        if (!query) {
+            renderTools(tools, categories);
+            return;
+        }
+        const filtered = tools.filter(t => {
+            const searchText = [t.title, t.description, ...(t.tags || [])].join(' ').toLowerCase();
+            const cat = categories.find(c => c.id === t.categoryId);
+            const catName = cat ? cat.name.toLowerCase() : '';
+            return searchText.includes(query) || catName.includes(query);
+        });
+        renderTools(filtered, categories);
+    };
+    if (toolSearchInput) {
+        toolSearchInput.addEventListener('input', renderFilteredTools);
+    }
 
     // --- Modal Logic ---
     const openModal = () => toolModal.style.display = 'flex';
@@ -419,7 +449,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderParsePreview = (data) => {
         parsedData = data;
         let html = '';
-        let actions = '';
+
+        // Auto-apply parsed data
+        toolThumbnailInput.value = data.thumbnail || '';
+        toolEmbedUrlInput.value = data.embedUrl || '';
+        toolTypeInput.value = data.type || '';
+        toolPlatformInput.value = data.platform || '';
+        toolFaviconInput.value = data.favicon || '';
+        if (data.title && !toolTitleInput.value) toolTitleInput.value = data.title;
+        if (data.description && !toolDescriptionInput.value) toolDescriptionInput.value = data.description;
 
         if (data.type === 'video' && data.platform) {
             const platformNames = { bilibili: 'B站视频', youtube: 'YouTube视频' };
@@ -433,10 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${data.author ? `<div class="parse-author">UP主: ${data.author}</div>` : ''}
                     </div>
                 </div>
-            `;
-            actions = `
-                <button type="button" class="btn btn-primary btn-sm" id="use-thumbnail-btn">使用封面</button>
-                ${data.embedUrl ? `<button type="button" class="btn btn-primary btn-sm" id="use-embed-btn">嵌入播放</button>` : ''}
+                <div class="parse-applied">✓ 已自动填充标题、描述、封面和嵌入</div>
             `;
         } else if (data.type === 'webpage') {
             html = `
@@ -448,48 +483,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${data.description ? `<div class="parse-desc">${data.description.substring(0, 100)}${data.description.length > 100 ? '...' : ''}</div>` : ''}
                     </div>
                 </div>
+                <div class="parse-applied">✓ 已自动填充标题、描述和图标</div>
             `;
-            actions = data.favicon ? `<button type="button" class="btn btn-primary btn-sm" id="use-favicon-btn">使用图标</button>` : '';
         } else {
             html = '<div class="parse-status-info">❓ 无法识别此链接，将作为普通工具保存</div>';
         }
 
         parsePreviewContent.innerHTML = html;
-        parsePreviewActions.innerHTML = actions;
+        parsePreviewActions.innerHTML = '';
         parsePreview.style.display = 'block';
-
-        // Bind action buttons
-        const useThumbnailBtn = document.getElementById('use-thumbnail-btn');
-        const useEmbedBtn = document.getElementById('use-embed-btn');
-        const useFaviconBtn = document.getElementById('use-favicon-btn');
-
-        if (useThumbnailBtn) {
-            useThumbnailBtn.addEventListener('click', () => {
-                toolThumbnailInput.value = data.thumbnail || '';
-                toolTypeInput.value = data.type || '';
-                toolPlatformInput.value = data.platform || '';
-                if (data.title && !toolTitleInput.value) toolTitleInput.value = data.title;
-                if (data.description && !toolDescriptionInput.value) toolDescriptionInput.value = data.description;
-                useThumbnailBtn.textContent = '✓ 已使用';
-                useThumbnailBtn.disabled = true;
-            });
-        }
-        if (useEmbedBtn) {
-            useEmbedBtn.addEventListener('click', () => {
-                toolEmbedUrlInput.value = data.embedUrl || '';
-                useEmbedBtn.textContent = '✓ 已嵌入';
-                useEmbedBtn.disabled = true;
-            });
-        }
-        if (useFaviconBtn) {
-            useFaviconBtn.addEventListener('click', () => {
-                toolFaviconInput.value = data.favicon || '';
-                if (data.title && !toolTitleInput.value) toolTitleInput.value = data.title;
-                if (data.description && !toolDescriptionInput.value) toolDescriptionInput.value = data.description;
-                useFaviconBtn.textContent = '✓ 已使用';
-                useFaviconBtn.disabled = true;
-            });
-        }
     };
 
     parseUrlBtn.addEventListener('click', async () => {

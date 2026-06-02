@@ -574,6 +574,13 @@ main#timeline-container::-webkit-scrollbar-thumb {
     display: block;
     padding: 1.5rem;
 }
+.tool-card--video h2,
+.tool-card--video p {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
 .tool-card__media {
     position: relative;
     margin: 0.75rem -1.5rem -1.5rem;

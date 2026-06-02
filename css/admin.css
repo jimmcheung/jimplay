@@ -487,3 +487,27 @@
 .tags-suggestions li:hover, .tags-suggestions li.selected {
     background-color: var(--bg);
 }
+/* Tool Search */
+.tool-search-input {
+    width: 100%;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background-color: var(--bg);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    box-sizing: border-box;
+}
+.tool-search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--tag-red-bg);
+}
+
+/* Date Cell */
+.date-cell {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
