@@ -111,18 +111,16 @@ document.addEventListener('DOMContentLoaded', () => {
             `<span class="tag ${getTagClass(tag)}">${escapeHtml(tag)}</span>`
         ).join('');
 
-        // Video card with thumbnail
+        // Video card with thumbnail (original card style, thumbnail at bottom)
         if (tool.type === 'video' && tool.thumbnail) {
             return `
                 <a href="javascript:void(0)" class="tool-card tool-card--video" data-embed-url="${escapeHtml(tool.embedUrl || '')}" data-url="${escapeHtml(tool.url)}" data-title="${escapeHtml(tool.title)}" data-desc="${escapeHtml(tool.description)}">
+                    <h2>${escapeHtml(tool.title)}</h2>
+                    <div class="tags">${tagsHTML}</div>
+                    <p>${escapeHtml(tool.description)}</p>
                     <div class="tool-card__media">
                         <img src="${escapeHtml(tool.thumbnail)}" alt="${escapeHtml(tool.title)}" loading="lazy" class="tool-card__thumbnail">
                         <div class="tool-card__play">▶</div>
-                    </div>
-                    <div class="tool-card__body">
-                        <h2>${escapeHtml(tool.title)}</h2>
-                        <div class="tags">${tagsHTML}</div>
-                        <p>${escapeHtml(tool.description)}</p>
                     </div>
                 </a>
             `;

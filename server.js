@@ -34,6 +34,10 @@ app.use(helmet({
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
             imgSrc: ["'self'", "data:", "https:"],
             connectSrc: ["'self'"],
+            frameSrc: ["'self'", "https://player.bilibili.com", "https://www.youtube.com", "https://www.bilibili.com"],
+            "base-uri": ["'self'"],
+            "form-action": ["'self'"],
+            "frame-ancestors": ["'self'"],
         }
     }
 }));

@@ -569,26 +569,23 @@ main#timeline-container::-webkit-scrollbar-thumb {
     font-size: 0.9rem;
 }
 
-/* --- Video Card (Large card with thumbnail) --- */
+/* --- Video Card (Original style, thumbnail below title) --- */
 .tool-card--video {
-    display: flex;
-    gap: 0;
-    padding: 0;
-    overflow: hidden;
-    align-items: stretch;
+    display: block;
+    padding: 1.5rem;
 }
 .tool-card__media {
     position: relative;
-    width: 220px;
-    min-height: 150px;
-    flex-shrink: 0;
+    margin: 0.75rem -1.5rem -1.5rem;
     overflow: hidden;
+    border-radius: 0 0 16px 16px;
 }
 .tool-card__thumbnail {
     width: 100%;
-    height: 100%;
-    object-fit: cover;
+    height: auto;
     display: block;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
 }
 .tool-card__play {
     position: absolute;
@@ -611,29 +608,6 @@ main#timeline-container::-webkit-scrollbar-thumb {
 .tool-card--video:hover .tool-card__play {
     opacity: 1;
 }
-.tool-card__body {
-    flex: 1;
-    padding: 1.25rem;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-.tool-card__body h2 {
-    margin: 0 0 0.4rem;
-    font-size: 1.05rem;
-}
-.tool-card__body .tags {
-    margin-bottom: 0.4rem;
-}
-.tool-card__body p {
-    margin: 0;
-    font-size: 0.85rem;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
 
 /* --- Webpage Card (with favicon) --- */
 .tool-card--webpage .tool-card__head {
@@ -651,11 +625,6 @@ main#timeline-container::-webkit-scrollbar-thumb {
 .tool-card--webpage .tool-card__head h2 {
     margin: 0;
     font-size: 1.1rem;
-}
-
-/* --- Video Card in Grid --- */
-.tool-grid .tool-card--video {
-    grid-column: 1 / -1; /* Video cards take full width in grid */
 }
 
 /* --- Responsive --- */
