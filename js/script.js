@@ -111,6 +111,38 @@ document.addEventListener('DOMContentLoaded', () => {
             `<span class="tag ${getTagClass(tag)}">${escapeHtml(tag)}</span>`
         ).join('');
 
+        // Video card with thumbnail
+        if (tool.type === 'video' && tool.thumbnail) {
+            return `
+                <a href="javascript:void(0)" class="tool-card tool-card--video" data-embed-url="${escapeHtml(tool.embedUrl || '')}" data-url="${escapeHtml(tool.url)}" data-title="${escapeHtml(tool.title)}" data-desc="${escapeHtml(tool.description)}">
+                    <div class="tool-card__media">
+                        <img src="${escapeHtml(tool.thumbnail)}" alt="${escapeHtml(tool.title)}" loading="lazy" class="tool-card__thumbnail">
+                        <div class="tool-card__play">▶</div>
+                    </div>
+                    <div class="tool-card__body">
+                        <h2>${escapeHtml(tool.title)}</h2>
+                        <div class="tags">${tagsHTML}</div>
+                        <p>${escapeHtml(tool.description)}</p>
+                    </div>
+                </a>
+            `;
+        }
+
+        // Webpage card with favicon
+        if (tool.favicon) {
+            return `
+                <a href="${escapeHtml(tool.url)}" target="_blank" rel="noopener noreferrer" class="tool-card tool-card--webpage">
+                    <div class="tool-card__head">
+                        <img src="${escapeHtml(tool.favicon)}" alt="" class="tool-card__favicon" onerror="this.style.display='none'">
+                        <h2>${escapeHtml(tool.title)}</h2>
+                    </div>
+                    <div class="tags">${tagsHTML}</div>
+                    <p>${escapeHtml(tool.description)}</p>
+                </a>
+            `;
+        }
+
+        // Default card
         return `
             <a href="${escapeHtml(tool.url)}" target="_blank" rel="noopener noreferrer" class="tool-card">
                 <h2>${escapeHtml(tool.title)}</h2>
@@ -159,9 +191,20 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        // Category title click-to-scroll
+        // Video card click → open modal
         if (timelineContainer) {
             timelineContainer.addEventListener('click', (e) => {
+                const videoCard = e.target.closest('.tool-card--video');
+                if (videoCard) {
+                    e.preventDefault();
+                    const embedUrl = videoCard.dataset.embedUrl;
+                    const url = videoCard.dataset.url;
+                    const title = videoCard.dataset.title;
+                    const desc = videoCard.dataset.desc;
+                    openVideoModal(embedUrl, url, title, desc);
+                    return;
+                }
+                
                 const target = e.target.closest('[data-scroll-target]');
                 if (target) {
                     const targetId = target.dataset.scrollTarget;
@@ -193,6 +236,41 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     };
+
+    // --- Video Modal ---
+    const videoModal = document.getElementById('video-modal');
+    const videoEmbedWrapper = document.getElementById('video-embed-wrapper');
+    const videoModalTitle = document.getElementById('video-modal-title');
+    const videoModalDesc = document.getElementById('video-modal-desc');
+    const videoModalLink = document.getElementById('video-modal-link');
+
+    const openVideoModal = (embedUrl, url, title, desc) => {
+        videoEmbedWrapper.innerHTML = '';
+        if (embedUrl) {
+            videoEmbedWrapper.innerHTML = `<iframe src="${escapeHtml(embedUrl)}" allowfullscreen allow="autoplay; encrypted-media" loading="lazy"></iframe>`;
+        }
+        videoModalTitle.textContent = title || '';
+        videoModalDesc.textContent = desc || '';
+        videoModalLink.href = url || '#';
+        videoModal.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    };
+
+    const closeVideoModal = () => {
+        videoModal.classList.remove('open');
+        videoEmbedWrapper.innerHTML = ''; // Stop video playback
+        document.body.style.overflow = '';
+    };
+
+    if (videoModal) {
+        document.querySelector('.video-modal-close').addEventListener('click', closeVideoModal);
+        videoModal.addEventListener('click', (e) => {
+            if (e.target === videoModal) closeVideoModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && videoModal.classList.contains('open')) closeVideoModal();
+        });
+    }
 
     // Donate Modal
     const openDonateModal = () => {

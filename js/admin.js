@@ -18,7 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
         TOOLS: '/api/tools',
         CATEGORIES: '/api/categories',
         SETTINGS: '/api/settings',
-        AUTH_LOGIN: '/api/auth/login'
+        AUTH_LOGIN: '/api/auth/login',
+        PARSE_URL: '/api/parse-url'
     };
 
     // --- View Switching ---
@@ -38,6 +39,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const toolUrlInput = document.getElementById('tool-url');
     const toolDescriptionInput = document.getElementById('tool-description');
     const toolCategorySelect = document.getElementById('tool-category');
+    const parseUrlBtn = document.getElementById('parse-url-btn');
+    const parseStatus = document.getElementById('parse-status');
+    const parsePreview = document.getElementById('parse-preview');
+    const parsePreviewContent = document.getElementById('parse-preview-content');
+    const parsePreviewActions = document.getElementById('parse-preview-actions');
+    const toolThumbnailInput = document.getElementById('tool-thumbnail');
+    const toolEmbedUrlInput = document.getElementById('tool-embed-url');
+    const toolTypeInput = document.getElementById('tool-type');
+    const toolPlatformInput = document.getElementById('tool-platform');
+    const toolFaviconInput = document.getElementById('tool-favicon');
+    let parsedData = null;
     
     // --- Tag Input Elements ---
     const tagsContainer = document.getElementById('tags-container');
@@ -278,8 +290,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetForm = () => {
         editForm.reset();
         toolIdInput.value = '';
+        toolThumbnailInput.value = '';
+        toolEmbedUrlInput.value = '';
+        toolTypeInput.value = '';
+        toolPlatformInput.value = '';
+        toolFaviconInput.value = '';
         tagsContainer.querySelectorAll('.tag-pill').forEach(pill => pill.remove());
         tagsInput.value = '';
+        clearParsePreview();
     };
 
     // --- Tag Input Logic ---
@@ -388,6 +406,117 @@ document.addEventListener('DOMContentLoaded', () => {
 
     modalCloseBtn.addEventListener('click', closeModal);
     cancelEditBtn.addEventListener('click', closeModal);
+
+    // --- URL Parse Logic ---
+    const clearParsePreview = () => {
+        parseStatus.textContent = '';
+        parsePreview.style.display = 'none';
+        parsePreviewContent.innerHTML = '';
+        parsePreviewActions.innerHTML = '';
+        parsedData = null;
+    };
+
+    const renderParsePreview = (data) => {
+        parsedData = data;
+        let html = '';
+        let actions = '';
+
+        if (data.type === 'video' && data.platform) {
+            const platformNames = { bilibili: 'B站视频', youtube: 'YouTube视频' };
+            const platformEmoji = { bilibili: '🎬', youtube: '▶️' };
+            html = `
+                <div class="parse-preview-card">
+                    ${data.thumbnail ? `<img src="${data.thumbnail}" alt="封面" class="parse-thumbnail" onerror="this.style.display='none'">` : ''}
+                    <div class="parse-info">
+                        <span class="parse-platform">${platformEmoji[data.platform] || '🎬'} ${platformNames[data.platform] || data.platform}</span>
+                        ${data.title ? `<div class="parse-title">${data.title}</div>` : ''}
+                        ${data.author ? `<div class="parse-author">UP主: ${data.author}</div>` : ''}
+                    </div>
+                </div>
+            `;
+            actions = `
+                <button type="button" class="btn btn-primary btn-sm" id="use-thumbnail-btn">使用封面</button>
+                ${data.embedUrl ? `<button type="button" class="btn btn-primary btn-sm" id="use-embed-btn">嵌入播放</button>` : ''}
+            `;
+        } else if (data.type === 'webpage') {
+            html = `
+                <div class="parse-preview-card">
+                    ${data.favicon ? `<img src="${data.favicon}" alt="icon" class="parse-favicon" onerror="this.style.display='none'">` : '🌐'}
+                    <div class="parse-info">
+                        <span class="parse-platform">🔗 普通网站</span>
+                        ${data.title ? `<div class="parse-title">${data.title}</div>` : ''}
+                        ${data.description ? `<div class="parse-desc">${data.description.substring(0, 100)}${data.description.length > 100 ? '...' : ''}</div>` : ''}
+                    </div>
+                </div>
+            `;
+            actions = data.favicon ? `<button type="button" class="btn btn-primary btn-sm" id="use-favicon-btn">使用图标</button>` : '';
+        } else {
+            html = '<div class="parse-status-info">❓ 无法识别此链接，将作为普通工具保存</div>';
+        }
+
+        parsePreviewContent.innerHTML = html;
+        parsePreviewActions.innerHTML = actions;
+        parsePreview.style.display = 'block';
+
+        // Bind action buttons
+        const useThumbnailBtn = document.getElementById('use-thumbnail-btn');
+        const useEmbedBtn = document.getElementById('use-embed-btn');
+        const useFaviconBtn = document.getElementById('use-favicon-btn');
+
+        if (useThumbnailBtn) {
+            useThumbnailBtn.addEventListener('click', () => {
+                toolThumbnailInput.value = data.thumbnail || '';
+                toolTypeInput.value = data.type || '';
+                toolPlatformInput.value = data.platform || '';
+                if (data.title && !toolTitleInput.value) toolTitleInput.value = data.title;
+                if (data.description && !toolDescriptionInput.value) toolDescriptionInput.value = data.description;
+                useThumbnailBtn.textContent = '✓ 已使用';
+                useThumbnailBtn.disabled = true;
+            });
+        }
+        if (useEmbedBtn) {
+            useEmbedBtn.addEventListener('click', () => {
+                toolEmbedUrlInput.value = data.embedUrl || '';
+                useEmbedBtn.textContent = '✓ 已嵌入';
+                useEmbedBtn.disabled = true;
+            });
+        }
+        if (useFaviconBtn) {
+            useFaviconBtn.addEventListener('click', () => {
+                toolFaviconInput.value = data.favicon || '';
+                if (data.title && !toolTitleInput.value) toolTitleInput.value = data.title;
+                if (data.description && !toolDescriptionInput.value) toolDescriptionInput.value = data.description;
+                useFaviconBtn.textContent = '✓ 已使用';
+                useFaviconBtn.disabled = true;
+            });
+        }
+    };
+
+    parseUrlBtn.addEventListener('click', async () => {
+        const url = toolUrlInput.value.trim();
+        if (!url) {
+            parseStatus.textContent = '请先输入链接';
+            return;
+        }
+        clearParsePreview();
+        parseStatus.textContent = '正在解析...';
+        parseUrlBtn.disabled = true;
+        parseUrlBtn.textContent = '解析中...';
+
+        try {
+            const result = await apiFetch(API_URLS.PARSE_URL, {
+                method: 'POST',
+                body: JSON.stringify({ url })
+            });
+            parseStatus.textContent = '';
+            renderParsePreview(result);
+        } catch (err) {
+            parseStatus.textContent = '解析失败: ' + err.message;
+        } finally {
+            parseUrlBtn.disabled = false;
+            parseUrlBtn.textContent = '解析';
+        }
+    });
     
     toolsListSection.addEventListener('click', async (e) => {
         const target = e.target.closest('button');
@@ -413,6 +542,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 toolUrlInput.value = tool.url;
                 toolDescriptionInput.value = tool.description;
                 toolCategorySelect.value = tool.categoryId;
+                toolThumbnailInput.value = tool.thumbnail || '';
+                toolEmbedUrlInput.value = tool.embedUrl || '';
+                toolTypeInput.value = tool.type || '';
+                toolPlatformInput.value = tool.platform || '';
+                toolFaviconInput.value = tool.favicon || '';
                 (tool.tags || []).forEach(createTagPill);
                 openModal();
             }
@@ -427,7 +561,12 @@ document.addEventListener('DOMContentLoaded', () => {
             url: toolUrlInput.value,
             description: toolDescriptionInput.value,
             categoryId: toolCategorySelect.value,
-            tags: getCurrentTags()
+            tags: getCurrentTags(),
+            thumbnail: toolThumbnailInput.value || undefined,
+            embedUrl: toolEmbedUrlInput.value || undefined,
+            type: toolTypeInput.value || undefined,
+            platform: toolPlatformInput.value || undefined,
+            favicon: toolFaviconInput.value || undefined
         };
         const method = id ? 'PUT' : 'POST';
         const url = id ? `${API_URLS.TOOLS}/${id}` : API_URLS.TOOLS;

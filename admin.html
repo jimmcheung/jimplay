@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="css/video.css">
 </head>
 <body>
 
@@ -125,8 +126,21 @@
                 </div>
                 <div class="form-field">
                     <label for="tool-url">链接</label>
-                    <input type="text" id="tool-url" required>
+                    <div class="url-input-row">
+                        <input type="text" id="tool-url" required placeholder="粘贴链接后点击解析">
+                        <button type="button" id="parse-url-btn" class="btn btn-secondary">解析</button>
+                    </div>
+                    <div id="parse-status" class="parse-status"></div>
+                    <div id="parse-preview" class="parse-preview" style="display:none;">
+                        <div id="parse-preview-content"></div>
+                        <div id="parse-preview-actions"></div>
+                    </div>
                 </div>
+                <input type="hidden" id="tool-thumbnail">
+                <input type="hidden" id="tool-embed-url">
+                <input type="hidden" id="tool-type">
+                <input type="hidden" id="tool-platform">
+                <input type="hidden" id="tool-favicon">
                 <div class="form-field">
                     <label for="tool-tags-input">标签 (输入后按回车)</label>
                     <div id="tags-container" class="tags-container">

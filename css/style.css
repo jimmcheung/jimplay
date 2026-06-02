@@ -569,6 +569,94 @@ main#timeline-container::-webkit-scrollbar-thumb {
     font-size: 0.9rem;
 }
 
+/* --- Video Card (Large card with thumbnail) --- */
+.tool-card--video {
+    display: flex;
+    gap: 1.25rem;
+    padding: 0;
+    overflow: hidden;
+}
+.tool-card__media {
+    position: relative;
+    width: 240px;
+    min-height: 140px;
+    flex-shrink: 0;
+    overflow: hidden;
+    border-radius: 16px 0 0 16px;
+}
+.tool-card__thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.tool-card__play {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 48px;
+    height: 48px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+.tool-card--video:hover .tool-card__play {
+    opacity: 1;
+}
+.tool-card__body {
+    flex: 1;
+    padding: 1.25rem 1.25rem 1.25rem 0;
+    min-width: 0;
+}
+.tool-card__body h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.15rem;
+}
+.tool-card__body p {
+    margin: 0;
+}
+
+/* --- Webpage Card (with favicon) --- */
+.tool-card--webpage .tool-card__head {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.5rem;
+}
+.tool-card__favicon {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+.tool-card--webpage .tool-card__head h2 {
+    margin: 0;
+    font-size: 1.15rem;
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+    .tool-card--video {
+        flex-direction: column;
+    }
+    .tool-card__media {
+        width: 100%;
+        min-height: 180px;
+        border-radius: 16px 16px 0 0;
+    }
+    .tool-card__body {
+        padding: 1rem;
+    }
+}
+
 /* --- Loading Skeleton --- */
 .skeleton {
     background: linear-gradient(90deg, var(--border) 25%, var(--bg) 50%, var(--border) 75%);

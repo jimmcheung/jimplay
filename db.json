@@ -39,6 +39,12 @@
       "name": "Jim的最新视频",
       "order": 0,
       "parentId": null
+    },
+    {
+      "id": "1780375129995",
+      "name": "bilibili",
+      "order": 6,
+      "parentId": "1780371504349"
     }
   ],
   "tools": [
@@ -101,9 +107,19 @@
       "title": "无线的动圈麦克风居然这么好用？闪克PD200W无线桌面麦克风直接开箱！",
       "description": "如果你点进这个视频，那说明你正在搜索动圈麦或者闪克PD200W无线桌面麦克风。那在你决定购买之前，希望这期视频对你有所帮助！",
       "url": "https://www.bilibili.com/video/BV1BKzFBdEw3/",
-      "categoryId": "1780371504349",
+      "categoryId": "1780375129995",
       "tags": [
-        "视频"
+        "直接开箱"
+      ]
+    },
+    {
+      "id": "1780375199339",
+      "title": "更轻更小还更亮？艾蒙拉Ray120C直接开箱！",
+      "description": "如果你正在搜索摄影灯或者刚发布不久的艾蒙拉Ray系列，在你决定购买之前，希望这期视频对你有所帮助。欢迎来到这一期，直接开箱！",
+      "url": "https://www.bilibili.com/video/BV1LmmLBWETD/",
+      "categoryId": "1780375129995",
+      "tags": [
+        "直接开箱"
       ]
     }
   ]

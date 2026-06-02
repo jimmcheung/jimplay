@@ -298,13 +298,15 @@ apiRouter.get('/tools', async (req, res) => {
 
 // Add a new tool (Protected)
 apiRouter.post('/tools', jwtAuth, async (req, res) => {
-    const { title, description, url, categoryId, tags } = req.body;
+    const { title, description, url, categoryId, tags, thumbnail, embedUrl, type, platform, favicon } = req.body;
     if (!title || !description || !url || !categoryId) {
         return res.status(400).json({ message: 'Missing required fields' });
     }
 
     const db = await readDb();
-    const newTool = { id: Date.now().toString(), title, description, url, categoryId, tags: tags || [] };
+    const newTool = { id: Date.now().toString(), title, description, url, categoryId, tags: tags || [], 
+        ...(thumbnail && { thumbnail }), ...(embedUrl && { embedUrl }), 
+        ...(type && { type }), ...(platform && { platform }), ...(favicon && { favicon }) };
     db.tools.push(newTool);
     await writeDb(db);
     res.status(201).json(newTool);
@@ -313,7 +315,7 @@ apiRouter.post('/tools', jwtAuth, async (req, res) => {
 // Update a tool (Protected)
 apiRouter.put('/tools/:id', jwtAuth, async (req, res) => {
     const { id } = req.params;
-    const { title, description, url, categoryId, tags } = req.body;
+    const { title, description, url, categoryId, tags, thumbnail, embedUrl, type, platform, favicon } = req.body;
     const db = await readDb();
     
     const toolIndex = db.tools.findIndex(t => t.id === id);
@@ -321,7 +323,10 @@ apiRouter.put('/tools/:id', jwtAuth, async (req, res) => {
         return res.status(404).json({ message: 'Tool not found' });
     }
 
-    const updatedTool = { ...db.tools[toolIndex], title, description, url, categoryId, tags: tags || [] };
+    const updatedTool = { ...db.tools[toolIndex], title, description, url, categoryId, tags: tags || [],
+        ...(thumbnail !== undefined && { thumbnail }), ...(embedUrl !== undefined && { embedUrl }),
+        ...(type !== undefined && { type }), ...(platform !== undefined && { platform }),
+        ...(favicon !== undefined && { favicon }) };
     db.tools[toolIndex] = updatedTool;
     await writeDb(db);
     res.json(updatedTool);
@@ -343,6 +348,177 @@ apiRouter.delete('/tools/:id', jwtAuth, async (req, res) => {
 });
 
 app.use('/api', apiRouter);
+
+// --- URL Parse API (for video/site info extraction) ---
+const https = require('https');
+const http = require('http');
+
+function fetchUrl(url, options = {}) {
+    return new Promise((resolve, reject) => {
+        const mod = url.startsWith('https') ? https : http;
+        const req = mod.get(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                ...options.headers
+            },
+            timeout: 8000
+        }, (res) => {
+            // Follow redirects
+            if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                const redirectUrl = res.headers.location.startsWith('http') 
+                    ? res.headers.location 
+                    : new URL(res.headers.location, url).href;
+                return fetchUrl(redirectUrl, options).then(resolve).catch(reject);
+            }
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => resolve({ status: res.statusCode, body: data, headers: res.headers }));
+        });
+        req.on('error', reject);
+        req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    });
+}
+
+function parseBilibili(url) {
+    // Match BV id from various bilibili URL formats
+    const bvMatch = url.match(/BV[a-zA-Z0-9]+/);
+    if (!bvMatch) return null;
+    const bvid = bvMatch[0];
+    return { platform: 'bilibili', type: 'video', bvid, embedUrl: `https://player.bilibili.com/player.html?bvid=${bvid}&autoplay=0` };
+}
+
+function parseYouTube(url) {
+    let videoId = null;
+    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+    if (match) videoId = match[1];
+    if (!videoId) return null;
+    return { platform: 'youtube', type: 'video', videoId, 
+        thumbnail: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+        embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=0` };
+}
+
+async function getBilibiliInfo(bvid) {
+    try {
+        const apiUrl = `https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`;
+        const resp = await fetchUrl(apiUrl);
+        const data = JSON.parse(resp.body);
+        if (data.code === 0 && data.data) {
+            return {
+                title: data.data.title,
+                description: data.data.desc || '',
+                thumbnail: data.data.pic?.replace('http:', 'https:'),
+                author: data.data.owner?.name || ''
+            };
+        }
+    } catch (e) {
+        console.error('[Parse] Bilibili API error:', e.message);
+    }
+    return null;
+}
+
+async function getWebsiteInfo(url) {
+    try {
+        const resp = await fetchUrl(url);
+        const html = resp.body;
+        const getMeta = (prop) => {
+            const patterns = [
+                new RegExp(`<meta[^>]+property=["']${prop}["'][^>]+content=["']([^"']+)["']`, 'i'),
+                new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+property=["']${prop}["']`, 'i'),
+                new RegExp(`<meta[^>]+name=["']${prop}["'][^>]+content=["']([^"']+)["']`, 'i'),
+                new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+name=["']${prop}["']`, 'i'),
+            ];
+            for (const p of patterns) {
+                const m = html.match(p);
+                if (m) return m[1];
+            }
+            return null;
+        };
+        
+        const title = getMeta('og:title') || getMeta('title') || (html.match(/<title[^>]*>([^<]+)<\/title>/i) || [])[1] || '';
+        const description = getMeta('og:description') || getMeta('description') || '';
+        const ogImage = getMeta('og:image') || '';
+        const siteName = getMeta('og:site_name') || '';
+        
+        // Try to find favicon
+        let favicon = '';
+        const faviconMatch = html.match(/<link[^>]+rel=["'](?:shortcut )?icon["'][^>]+href=["']([^"']+)["']/i) 
+            || html.match(/<link[^>]+href=["']([^"']+)["'][^>]+rel=["'](?:shortcut )?icon["']/i);
+        if (faviconMatch) {
+            favicon = faviconMatch[1].startsWith('http') ? faviconMatch[1] : new URL(faviconMatch[1], url).href;
+        }
+        if (!favicon) {
+            // Try apple-touch-icon
+            const appleMatch = html.match(/<link[^>]+rel=["']apple-touch-icon["'][^>]+href=["']([^"']+)["']/i);
+            if (appleMatch) favicon = appleMatch[1].startsWith('http') ? appleMatch[1] : new URL(appleMatch[1], url).href;
+        }
+        if (!favicon) {
+            // Default favicon.ico
+            try { favicon = new URL('/favicon.ico', url).href; } catch(e) {}
+        }
+
+        return { title: title.trim(), description: description.trim(), thumbnail: ogImage, favicon, siteName };
+    } catch (e) {
+        console.error('[Parse] Website info error:', e.message);
+        return null;
+    }
+}
+
+apiRouter.post('/parse-url', jwtAuth, async (req, res) => {
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ message: 'URL is required' });
+
+    try {
+        // Detect platform
+        const bilibili = parseBilibili(url);
+        const youtube = parseYouTube(url);
+
+        if (bilibili) {
+            const info = await getBilibiliInfo(bilibili.bvid);
+            return res.json({
+                type: 'video',
+                platform: 'bilibili',
+                title: info?.title || '',
+                description: info?.description || '',
+                thumbnail: info?.thumbnail || '',
+                embedUrl: bilibili.embedUrl,
+                author: info?.author || ''
+            });
+        }
+
+        if (youtube) {
+            return res.json({
+                type: 'video',
+                platform: 'youtube',
+                title: '',
+                description: '',
+                thumbnail: youtube.thumbnail,
+                embedUrl: youtube.embedUrl,
+                author: ''
+            });
+        }
+
+        // Regular website
+        const info = await getWebsiteInfo(url);
+        if (info) {
+            return res.json({
+                type: 'webpage',
+                platform: null,
+                title: info.title,
+                description: info.description,
+                thumbnail: info.ogImage || '',
+                favicon: info.favicon,
+                siteName: info.siteName,
+                embedUrl: null
+            });
+        }
+
+        return res.json({ type: 'unknown', platform: null, title: '', description: '', thumbnail: '', favicon: '', embedUrl: null });
+
+    } catch (error) {
+        console.error('[Parse URL Error]', error.message);
+        res.status(500).json({ message: '解析失败，请稍后重试' });
+    }
+});
 
 // --- Serve Static Files ---
 // This should come AFTER all API routes.
