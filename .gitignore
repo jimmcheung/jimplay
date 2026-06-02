@@ -32,4 +32,5 @@ build/
 pids
 *.pid
 *.seed
-*.pid.lock 
+*.pid.lock
+db.json
