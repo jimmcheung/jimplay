@@ -139,9 +139,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Build category filter options
         const catOptions = categories.map(c => {
-            const selected = filterCategory === c.id ? 'selected' : '';
-            return `<option value="${c.id}" ${selected}>${c.name}</option>`;
+            const active = filterCategory === c.id ? 'active' : '';
+            return `<button class="filter-option ${active}" data-cat-id="${c.id}">${c.name}</button>`;
         }).join('');
+        const filterActive = filterCategory ? 'open' : '';
+        const filterLabel = filterCategory ? (categories.find(c=>c.id===filterCategory)?.name || '全部栏目') : '全部栏目';
 
         const tableRows = toolList.map(tool => {
             const category = categories.find(c => c.id === tool.categoryId);
@@ -172,10 +174,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     <tr>
                         <th class="sortable-header" data-sort="title">标题${getSortIcon('title')}</th>
                         <th>
-                            <select id="cat-filter-select" class="header-filter-select">
-                                <option value="">全部栏目</option>
-                                ${catOptions}
-                            </select>
+                            <div class="filter-dropdown ${filterActive}">
+                                <button class="filter-trigger">${filterLabel} <span class="filter-arrow">▾</span></button>
+                                <div class="filter-menu">
+                                    <button class="filter-option ${filterCategory === '' ? 'active' : ''}" data-cat-id="">全部栏目</button>
+                                    ${catOptions}
+                                </div>
+                            </div>
                         </th>
                         <th class="sortable-header" data-sort="createdAt">创建时间${getSortIcon('createdAt')}</th>
                         <th class="actions-header">操作</th>
@@ -201,13 +206,33 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // Bind category filter
-        const catFilterSelect = document.getElementById('cat-filter-select');
-        if (catFilterSelect) {
-            catFilterSelect.addEventListener('change', (e) => {
-                filterCategory = e.target.value;
-                renderFilteredTools();
+        // Bind category filter dropdown
+        const filterTrigger = toolsListSection.querySelector('.filter-trigger');
+        const filterDropdown = toolsListSection.querySelector('.filter-dropdown');
+        if (filterTrigger && filterDropdown) {
+            filterTrigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                // Close other open dropdowns first
+                toolsListSection.querySelectorAll('.filter-dropdown.open').forEach(d => {
+                    if (d !== filterDropdown) d.classList.remove('open');
+                });
+                filterDropdown.classList.toggle('open');
             });
+            filterDropdown.querySelectorAll('.filter-option').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    filterCategory = btn.dataset.catId;
+                    filterDropdown.classList.remove('open');
+                    renderFilteredTools();
+                });
+            });
+            // Close on click outside
+            const closeDropdown = (e) => {
+                if (!filterDropdown.contains(e.target)) {
+                    filterDropdown.classList.remove('open');
+                }
+            };
+            document.addEventListener('click', closeDropdown);
         }
     };
 
