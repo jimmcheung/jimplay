@@ -511,3 +511,31 @@
     color: var(--text-secondary);
     white-space: nowrap;
 }
+
+/* Sortable Headers */
+.sortable-header {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s;
+}
+.sortable-header:hover {
+    color: var(--accent);
+}
+
+/* Header Filter Select */
+.header-filter-select {
+    padding: 0.25rem 0.4rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background-color: var(--card-bg);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.header-filter-select:focus {
+    outline: none;
+    border-color: var(--accent);
+}

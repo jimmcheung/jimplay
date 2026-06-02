@@ -123,14 +123,25 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     };
 
+    const getSortIcon = (field) => {
+        if (sortField !== field) return ' ↕';
+        return sortDir === 'asc' ? ' ↑' : ' ↓';
+    };
+
     const renderTools = (toolList, categories) => {
         const toolsListSection = document.getElementById('tools-list');
         if (!toolsListSection) return;
 
         if (toolList.length === 0) {
-            toolsListSection.innerHTML = '<p class="empty-state-message">还没有工具，点击"新建工具"来添加一个吧。</p>';
+            toolsListSection.innerHTML = '<p class="empty-state-message">没有找到匹配的工具。</p>';
             return;
         }
+
+        // Build category filter options
+        const catOptions = categories.map(c => {
+            const selected = filterCategory === c.id ? 'selected' : '';
+            return `<option value="${c.id}" ${selected}>${c.name}</option>`;
+        }).join('');
 
         const tableRows = toolList.map(tool => {
             const category = categories.find(c => c.id === tool.categoryId);
@@ -159,9 +170,14 @@ document.addEventListener('DOMContentLoaded', () => {
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>标题</th>
-                        <th>栏目</th>
-                        <th>创建时间</th>
+                        <th class="sortable-header" data-sort="title">标题${getSortIcon('title')}</th>
+                        <th>
+                            <select id="cat-filter-select" class="header-filter-select">
+                                <option value="">全部栏目</option>
+                                ${catOptions}
+                            </select>
+                        </th>
+                        <th class="sortable-header" data-sort="createdAt">创建时间${getSortIcon('createdAt')}</th>
                         <th class="actions-header">操作</th>
                     </tr>
                 </thead>
@@ -170,6 +186,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 </tbody>
             </table>
         `;
+
+        // Bind sort headers
+        toolsListSection.querySelectorAll('.sortable-header').forEach(th => {
+            th.addEventListener('click', () => {
+                const field = th.dataset.sort;
+                if (sortField === field) {
+                    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortField = field;
+                    sortDir = field === 'title' ? 'asc' : 'desc';
+                }
+                renderFilteredTools();
+            });
+        });
+
+        // Bind category filter
+        const catFilterSelect = document.getElementById('cat-filter-select');
+        if (catFilterSelect) {
+            catFilterSelect.addEventListener('change', (e) => {
+                filterCategory = e.target.value;
+                renderFilteredTools();
+            });
+        }
     };
 
     const renderCategories = () => {
@@ -290,22 +329,49 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- Tool Search ---
+    // --- Tool Search & Sort State ---
     const toolSearchInput = document.getElementById('tool-search');
+    let sortField = 'createdAt';
+    let sortDir = 'desc';
+    let filterCategory = '';
+
     const renderFilteredTools = () => {
         const query = (toolSearchInput?.value || '').trim().toLowerCase();
-        if (!query) {
-            renderTools(tools, categories);
-            return;
+        let filtered = [...tools];
+
+        // Search filter
+        if (query) {
+            filtered = filtered.filter(t => {
+                const searchText = [t.title, t.description, ...(t.tags || [])].join(' ').toLowerCase();
+                const cat = categories.find(c => c.id === t.categoryId);
+                const catName = cat ? cat.name.toLowerCase() : '';
+                return searchText.includes(query) || catName.includes(query);
+            });
         }
-        const filtered = tools.filter(t => {
-            const searchText = [t.title, t.description, ...(t.tags || [])].join(' ').toLowerCase();
-            const cat = categories.find(c => c.id === t.categoryId);
-            const catName = cat ? cat.name.toLowerCase() : '';
-            return searchText.includes(query) || catName.includes(query);
+
+        // Category filter
+        if (filterCategory) {
+            filtered = filtered.filter(t => t.categoryId === filterCategory);
+        }
+
+        // Sort
+        filtered.sort((a, b) => {
+            let va, vb;
+            if (sortField === 'title') {
+                va = (a.title || '').toLowerCase();
+                vb = (b.title || '').toLowerCase();
+            } else {
+                va = new Date(a.createdAt || 0).getTime();
+                vb = new Date(b.createdAt || 0).getTime();
+            }
+            if (va < vb) return sortDir === 'asc' ? -1 : 1;
+            if (va > vb) return sortDir === 'asc' ? 1 : -1;
+            return 0;
         });
+
         renderTools(filtered, categories);
     };
+
     if (toolSearchInput) {
         toolSearchInput.addEventListener('input', renderFilteredTools);
     }
