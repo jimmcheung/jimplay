@@ -569,4 +569,25 @@ main#timeline-container::-webkit-scrollbar-thumb {
     margin-top: 1rem;
     color: var(--text-secondary);
     font-size: 0.9rem;
-} 
+}
+
+/* --- Loading Skeleton --- */
+.skeleton {
+    background: linear-gradient(90deg, var(--border) 25%, var(--bg) 50%, var(--border) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+    border-radius: 8px;
+}
+@keyframes skeleton-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+.skeleton-title {
+    height: 1.5rem;
+    width: 40%;
+    margin-bottom: 1rem;
+}
+.skeleton-card {
+    height: 120px;
+    margin-bottom: 1rem;
+}

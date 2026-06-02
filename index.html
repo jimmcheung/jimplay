@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>尽玩Space - JimPlay.cn</title>
+    <meta name="description" content="尽玩Space - JimPlay.cn，Jim的个人工具导航站，收录自己开发和常用的在线工具。">
+    <meta property="og:title" content="尽玩Space - JimPlay.cn">
+    <meta property="og:description" content="Jim的个人工具导航站，收录自己开发和常用的在线工具。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://jimplay.cn">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap">
     <link rel="stylesheet" href="css/style.css">
     <script src="js/script.js" defer></script>
@@ -33,7 +41,14 @@
         </header>
 
         <main id="timeline-container">
-            <!-- Timeline items will be dynamically inserted here -->
+            <!-- Skeleton loading placeholder -->
+            <div class="scroll-area" id="skeleton-loader">
+                <div class="timeline">
+                    <div class="timeline-group"><div class="timeline-group__marker"><div class="skeleton skeleton-title"></div></div><div class="timeline-group__content"><div class="skeleton skeleton-card"></div></div></div>
+                    <div class="timeline-group"><div class="timeline-group__marker"><div class="skeleton skeleton-title"></div></div><div class="timeline-group__content"><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div></div></div>
+                    <div class="timeline-group"><div class="timeline-group__marker"><div class="skeleton skeleton-title"></div></div><div class="timeline-group__content"><div class="skeleton skeleton-card"></div></div></div>
+                </div>
+            </div>
         </main>
 
         <footer class="site-footer">

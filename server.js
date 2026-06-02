@@ -1,22 +1,44 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const fs = require('fs/promises');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 
+// --- Validate required environment variables ---
+const REQUIRED_ENV = ['ADMIN_PASSWORD', 'JWT_SECRET'];
+for (const key of REQUIRED_ENV) {
+    if (!process.env[key]) {
+        console.error(`[FATAL] Missing required environment variable: ${key}`);
+        process.exit(1);
+    }
+}
+
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const DB_PATH = path.join(__dirname, 'db.json');
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'default_password';
-const JWT_SECRET = process.env.JWT_SECRET || 'default_jwt_secret';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const JWT_SECRET = process.env.JWT_SECRET;
 const ADMIN_PATH = process.env.ADMIN_PATH || '/admin.html';
 
 // --- Middleware ---
-app.set('trust proxy', 1); // Trust Nginx proxy headers
-app.use(cors());
-app.use(express.json()); // For parsing application/json
+app.set('trust proxy', 1);
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'"],
+        }
+    }
+}));
+app.use(cors({ origin: /https?:\/\/(.*\.)?jimplay\.cn$/ }));
+app.use(express.json());
 
 // --- Rate Limiter for login ---
 const WHITELIST_IPS = (process.env.WHITELIST_IPS || '').split(',').map(s => s.trim()).filter(Boolean);
@@ -48,8 +70,15 @@ const readDb = async () => {
     }
 };
 
+// --- Write queue to prevent concurrent write corruption ---
+let writeQueue = Promise.resolve();
 const writeDb = async (data) => {
-    await fs.writeFile(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
+    writeQueue = writeQueue.then(async () => {
+        await fs.writeFile(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
+    }).catch(err => {
+        console.error('[DB] Write error:', err);
+    });
+    return writeQueue;
 };
 
 // JWT Auth middleware

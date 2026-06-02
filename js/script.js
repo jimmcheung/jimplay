@@ -11,6 +11,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const donateLink = document.getElementById('donate-link');
     const donateModalClose = document.querySelector('.donate-modal-close');
 
+    // --- Utility: Escape HTML to prevent XSS ---
+    const escapeHtml = (str) => {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    };
+
     // --- Data Fetching ---
     const fetchData = async () => {
         try {
@@ -26,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Failed to fetch data:', error);
             if (timelineContainer) {
-                timelineContainer.innerHTML = '<p>Error loading content. Please try again later.</p>';
+                timelineContainer.innerHTML = '<p>内容加载失败，请稍后重试。</p>';
             }
         }
     };
@@ -35,6 +46,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderData = (categories) => {
         if (!timelineContainer) return;
         
+        // Remove skeleton loader
+        const skeleton = document.getElementById('skeleton-loader');
+        if (skeleton) skeleton.remove();
+
         timelineContainer.innerHTML = ''; // Clear existing content
         timelineContainer.className = 'scroll-area';
 
@@ -63,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     return `
                         <div class="subcategory-card">
-                            <h3 class="subcategory-title">${subcat.name}</h3>
+                            <h3 class="subcategory-title">${escapeHtml(subcat.name)}</h3>
                             <div class="tool-grid">
                                 ${toolCardsHTML}
                             </div>
@@ -77,8 +92,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             timelineGroup.innerHTML = `
                 <div class="timeline-group__marker">
-                    <h2 class="timeline-group__title" data-scroll-target="category-${category.id}">
-                        ${category.name}
+                    <h2 class="timeline-group__title" data-scroll-target="category-${escapeHtml(category.id)}">
+                        ${escapeHtml(category.name)}
                     </h2>
                 </div>
                 <div class="timeline-group__content">
@@ -93,14 +108,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const createToolCardHTML = (tool) => {
         const tagsHTML = (tool.tags || []).map(tag => 
-            `<span class="tag ${getTagClass(tag)}">${tag}</span>`
+            `<span class="tag ${getTagClass(tag)}">${escapeHtml(tag)}</span>`
         ).join('');
 
         return `
-            <a href="${tool.url}" target="_blank" class="tool-card">
-                <h2>${tool.title}</h2>
+            <a href="${escapeHtml(tool.url)}" target="_blank" rel="noopener noreferrer" class="tool-card">
+                <h2>${escapeHtml(tool.title)}</h2>
                 <div class="tags">${tagsHTML}</div>
-                <p>${tool.description}</p>
+                <p>${escapeHtml(tool.description)}</p>
             </a>
         `;
     };
@@ -109,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const icpContainer = document.getElementById('icp-container');
         if (icpContainer && settings && settings.icp) {
             if (settings.icpUrl) {
-                icpContainer.innerHTML = `<a href="${settings.icpUrl}" target="_blank" rel="noopener noreferrer">${settings.icp}</a>`;
+                icpContainer.innerHTML = `<a href="${escapeHtml(settings.icpUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(settings.icp)}</a>`;
             } else {
                 icpContainer.textContent = settings.icp;
             }
